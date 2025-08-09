@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+
+{% block title %}New Scan - VulnSleuth{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2 mb-0">
+            <i class="fas fa-plus-circle me-2"></i>New Vulnerability Scan
+        </h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item active">New Scan</li>
+            </ol>
+        </nav>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-cog me-2"></i>Scan Configuration
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="scanForm">
+                        <!-- Target Information -->
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="fas fa-bullseye me-2"></i>Target Information
+                            </h6>
+                            
+                            <div class="row">
+                                <div class="col-md-8 mb-3">
+                                    <label for="target" class="form-label">Target *</label>
+                                    <input type="text" class="form-control" id="target" name="target" 
+                                           placeholder="IP address, hostname, or CIDR range (e.g., 192.168.1.0/24)" required>
+                                    <div class="form-text">
+                                        Examples: 127.0.0.1, example.com, 192.168.1.1-100, 10.0.0.0/24
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4 mb-3">
+                                    <label for="ports" class="form-label">Ports</label>
+                                    <input type="text" class="form-control" id="ports" name="ports" 
+                                           value="1-1000" placeholder="1-65535">
+                                    <div class="form-text">
+                                        Examples: 80,443 or 1-1000 or top-ports-1000
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="scan_name" class="form-label">Scan Name (Optional)</label>
+                                    <input type="text" class="form-control" id="scan_name" name="scan_name" 
+                                           placeholder="My Network Scan">
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="description" class="form-label">Description (Optional)</label>
+                                    <input type="text" class="form-control" id="description" name="description" 
+                                           placeholder="Weekly security assessment">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Scan Types -->
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="fas fa-search me-2"></i>Scan Types
+                            </h6>
+                            
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="network_checks" 
+                                               name="network_checks" checked>
+                                        <label class="form-check-label" for="network_checks">
+                                            <strong>Network Scanning</strong>
+                                            <div class="small text-muted">Port scanning, service detection, OS fingerprinting</div>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="webapp_checks" 
+                                               name="webapp_checks">
+                                        <label class="form-check-label" for="webapp_checks">
+                                            <strong>Web Application</strong>
+                                            <div class="small text-muted">HTTP/HTTPS service vulnerability checks</div>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="local_checks" 
+                                               name="local_checks">
+                                        <label class="form-check-label" for="local_checks">
+                                            <strong>Local System</strong>
+                                            <div class="small text-muted">Local system configuration checks</div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Scan Options -->
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="fas fa-sliders-h me-2"></i>Scan Options
+                            </h6>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="severity_threshold" class="form-label">Minimum Severity</label>
+                                    <select class="form-select" id="severity_threshold" name="severity_threshold">
+                                        <option value="info">Info</option>
+                                        <option value="low">Low</option>
+                                        <option value="medium" selected>Medium</option>
+                                        <option value="high">High</option>
+                                        <option value="critical">Critical</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="col-md-3 mb-3">
+                                    <label for="threads" class="form-label">Threads</label>
+                                    <input type="number" class="form-control" id="threads" name="threads" 
+                                           value="10" min="1" max="50">
+                                </div>
+                                
+                                <div class="col-md-3 mb-3">
+                                    <label for="timeout" class="form-label">Timeout (seconds)</label>
+                                    <input type="number" class="form-control" id="timeout" name="timeout" 
+                                           value="300" min="60" max="3600">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Advanced Options -->
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="fas fa-cogs me-2"></i>Advanced Options
+                            </h6>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="plugins" class="form-label">Include Plugins (comma-separated)</label>
+                                    <input type="text" class="form-control" id="plugins" name="plugins" 
+                                           placeholder="plugin1,plugin2">
+                                    <div class="form-text">Leave empty to use all available plugins</div>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="exclude_plugins" class="form-label">Exclude Plugins (comma-separated)</label>
+                                    <input type="text" class="form-control" id="exclude_plugins" name="exclude_plugins" 
+                                           placeholder="slow_plugin,deprecated_plugin">
+                                </div>
+                            </div>
+                            
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="save_results" 
+                                       name="save_results" checked>
+                                <label class="form-check-label" for="save_results">
+                                    Save results to database
+                                </label>
+                            </div>
+                            
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="generate_report" 
+                                       name="generate_report">
+                                <label class="form-check-label" for="generate_report">
+                                    Generate HTML report after scan completion
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('scans') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Cancel
+                            </a>
+                            
+                            <div>
+                                <button type="button" class="btn btn-outline-primary me-2" id="validateBtn">
+                                    <i class="fas fa-check me-2"></i>Validate Configuration
+                                </button>
+                                <button type="submit" class="btn btn-primary" id="startScanBtn">
+                                    <i class="fas fa-play me-2"></i>Start Scan
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar with Info -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Scan Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Ethical Use Notice
+                        </h6>
+                        <p class="mb-0">Only scan systems you own or have explicit permission to test. 
+                        Unauthorized scanning may violate laws and regulations.</p>
+                    </div>
+                    
+                    <h6>Scan Types:</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-network-wired me-2 text-primary"></i>
+                            <strong>Network:</strong> Port scanning, service enumeration
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-globe me-2 text-info"></i>
+                            <strong>Web App:</strong> HTTP/HTTPS vulnerability checks
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-desktop me-2 text-success"></i>
+                            <strong>Local:</strong> System configuration assessment
+                        </li>
+                    </ul>
+                    
+                    <h6>Estimated Duration:</h6>
+                    <p class="text-muted small">
+                        Scan duration depends on target size and selected options. 
+                        Typical scans range from 2-30 minutes.
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Recent Targets -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-history me-2"></i>Recent Targets
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <button class="list-group-item list-group-item-action border-0 px-0 target-suggestion" 
+                                data-target="127.0.0.1">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>127.0.0.1</span>
+                                <small class="text-muted">localhost</small>
+                            </div>
+                        </button>
+                        <button class="list-group-item list-group-item-action border-0 px-0 target-suggestion" 
+                                data-target="192.168.1.0/24">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>192.168.1.0/24</span>
+                                <small class="text-muted">local network</small>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Target suggestions
+    $('.target-suggestion').click(function() {
+        $('#target').val($(this).data('target'));
+    });
+    
+    // Validate configuration
+    $('#validateBtn').click(function() {
+        var target = $('#target').val();
+        if (!target) {
+            alert('Please enter a target');
+            return;
+        }
+        
+        // Basic target validation
+        var ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+        var cidrRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/(?:[0-9]|[1-2][0-9]|3[0-2])$/;
+        var hostnameRegex = /^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$/;
+        
+        if (ipRegex.test(target) || cidrRegex.test(target) || hostnameRegex.test(target)) {
+            alert('Configuration looks valid!');
+        } else {
+            alert('Target format may be invalid. Please verify your input.');
+        }
+    });
+    
+    // Form submission
+    $('#scanForm').submit(function(e) {
+        e.preventDefault();
+        
+        var submitBtn = $('#startScanBtn');
+        var originalText = submitBtn.html();
+        
+        // Disable button and show loading
+        submitBtn.prop('disabled', true)
+                 .html('<i class="fas fa-spinner fa-spin me-2"></i>Starting Scan...');
+        
+        // Submit form via AJAX
+        $.ajax({
+            url: '{{ url_for("new_scan") }}',
+            type: 'POST',
+            data: $(this).serialize(),
+            success: function(response) {
+                if (response.success) {
+                    window.location.href = '/scan/' + response.scan_id;
+                } else {
+                    alert('Error: ' + response.error);
+                    submitBtn.prop('disabled', false).html(originalText);
+                }
+            },
+            error: function() {
+                alert('An error occurred while starting the scan');
+                submitBtn.prop('disabled', false).html(originalText);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

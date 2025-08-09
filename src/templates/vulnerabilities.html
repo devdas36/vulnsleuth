@@ -1,0 +1,377 @@
+{% extends "base.html" %}
+
+{% block title %}Vulnerabilities - VulnSleuth{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2 mb-0">
+            <i class="fas fa-bug me-2"></i>Vulnerabilities
+        </h1>
+        <div>
+            <button class="btn btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#filterModal">
+                <i class="fas fa-filter me-2"></i>Filters
+            </button>
+            <button class="btn btn-primary" id="exportBtn">
+                <i class="fas fa-download me-2"></i>Export
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    {% if stats %}
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card text-white bg-danger">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="card-title mb-0">{{ stats.critical or 0 }}</h4>
+                            <p class="card-text">Critical</p>
+                        </div>
+                        <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card text-white" style="background-color: var(--vuln-high);">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="card-title mb-0">{{ stats.high or 0 }}</h4>
+                            <p class="card-text">High</p>
+                        </div>
+                        <i class="fas fa-exclamation-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card text-dark" style="background-color: var(--vuln-medium);">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="card-title mb-0">{{ stats.medium or 0 }}</h4>
+                            <p class="card-text">Medium</p>
+                        </div>
+                        <i class="fas fa-exclamation fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="card-title mb-0">{{ (stats.low or 0) + (stats.info or 0) }}</h4>
+                            <p class="card-text">Low & Info</p>
+                        </div>
+                        <i class="fas fa-info-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if vulnerabilities %}
+    <div class="card">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="card-title mb-0">Vulnerability List ({{ vulnerabilities|length }} items)</h5>
+                </div>
+                <div class="col-auto">
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" id="searchInput" 
+                               placeholder="Search vulnerabilities...">
+                        <button class="btn btn-outline-secondary" type="button">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="vulnTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Severity</th>
+                            <th>Vulnerability</th>
+                            <th>Target</th>
+                            <th>Port/Service</th>
+                            <th>CVSS</th>
+                            <th>First Seen</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vuln in vulnerabilities %}
+                        <tr data-severity="{{ vuln.severity }}" data-target="{{ vuln.target }}">
+                            <td>
+                                <span class="vulnerability-badge {{ vuln.severity }}">
+                                    {{ vuln.severity.upper() }}
+                                </span>
+                            </td>
+                            <td>
+                                <strong>{{ vuln.title or vuln.name or 'Unknown Vulnerability' }}</strong>
+                                {% if vuln.description %}
+                                <br><small class="text-muted">{{ vuln.description[:100] }}{% if vuln.description|length > 100 %}...{% endif %}</small>
+                                {% endif %}
+                                {% if vuln.cve_id %}
+                                <br><small><a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name={{ vuln.cve_id }}" 
+                                            target="_blank" class="text-decoration-none">{{ vuln.cve_id }}</a></small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <strong>{{ vuln.target or vuln.host or 'N/A' }}</strong>
+                                {% if vuln.hostname and vuln.hostname != vuln.target %}
+                                <br><small class="text-muted">{{ vuln.hostname }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if vuln.port %}
+                                    {{ vuln.port }}
+                                    {% if vuln.service %}
+                                        <br><small class="text-muted">{{ vuln.service }}</small>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if vuln.cvss_score %}
+                                    <span class="badge bg-secondary">{{ vuln.cvss_score }}</span>
+                                {% else %}
+                                    <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>{{ vuln.first_detected or vuln.timestamp or 'Unknown' }}</small>
+                            </td>
+                            <td>
+                                {% set status = vuln.status or 'open' %}
+                                <span class="badge bg-{% if status == 'fixed' %}success{% elif status == 'in_progress' %}warning{% else %}danger{% endif %}">
+                                    {{ status.replace('_', ' ').title() }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary view-details" 
+                                            data-vuln='{{ vuln|tojson }}'
+                                            data-bs-toggle="tooltip" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    {% if vuln.severity in ['critical', 'high'] %}
+                                    <button class="btn btn-outline-success remediate-vuln" 
+                                            data-vuln-id="{{ loop.index }}"
+                                            data-bs-toggle="tooltip" title="Remediate">
+                                        <i class="fas fa-tools"></i>
+                                    </button>
+                                    {% endif %}
+                                    <button class="btn btn-outline-info mark-status" 
+                                            data-vuln-id="{{ loop.index }}"
+                                            data-bs-toggle="tooltip" title="Change Status">
+                                        <i class="fas fa-flag"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="text-center py-5">
+        <i class="fas fa-shield-alt fa-4x text-success mb-4"></i>
+        <h3 class="text-muted">No Vulnerabilities Found</h3>
+        <p class="text-muted mb-4">Great news! No vulnerabilities have been detected in your scans.</p>
+        <a href="{{ url_for('new_scan') }}" class="btn btn-primary">
+            <i class="fas fa-search me-2"></i>Run a New Scan
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Vulnerability Details Modal -->
+<div class="modal fade" id="vulnDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Vulnerability Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="vulnDetailsContent">
+                    <!-- Content loaded dynamically -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary">Generate Report</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Modal -->
+<div class="modal fade" id="filterModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Filter Vulnerabilities</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="filterForm">
+                    <div class="mb-3">
+                        <label class="form-label">Severity</label>
+                        <div class="form-check">
+                            <input class="form-check-input severity-filter" type="checkbox" value="critical" checked>
+                            <label class="form-check-label">Critical</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input severity-filter" type="checkbox" value="high" checked>
+                            <label class="form-check-label">High</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input severity-filter" type="checkbox" value="medium" checked>
+                            <label class="form-check-label">Medium</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input severity-filter" type="checkbox" value="low">
+                            <label class="form-check-label">Low</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input severity-filter" type="checkbox" value="info">
+                            <label class="form-check-label">Info</label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="targetFilter" class="form-label">Target</label>
+                        <input type="text" class="form-control" id="targetFilter" 
+                               placeholder="Filter by target...">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="clearFilters">Clear</button>
+                <button type="button" class="btn btn-primary" id="applyFilters">Apply Filters</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Search functionality
+    $('#searchInput').on('input', function() {
+        var searchTerm = $(this).val().toLowerCase();
+        $('#vulnTable tbody tr').each(function() {
+            var rowText = $(this).text().toLowerCase();
+            $(this).toggle(rowText.includes(searchTerm));
+        });
+    });
+    
+    // View vulnerability details
+    $('.view-details').click(function() {
+        var vuln = JSON.parse($(this).attr('data-vuln'));
+        
+        var html = '<div class="row">';
+        html += '<div class="col-md-6">';
+        html += '<h6>Basic Information</h6>';
+        html += '<table class="table table-sm">';
+        html += '<tr><td><strong>Title:</strong></td><td>' + (vuln.title || vuln.name || 'Unknown') + '</td></tr>';
+        html += '<tr><td><strong>Severity:</strong></td><td><span class="vulnerability-badge ' + vuln.severity + '">' + vuln.severity.toUpperCase() + '</span></td></tr>';
+        html += '<tr><td><strong>Target:</strong></td><td>' + (vuln.target || 'N/A') + '</td></tr>';
+        if (vuln.port) html += '<tr><td><strong>Port:</strong></td><td>' + vuln.port + '</td></tr>';
+        if (vuln.service) html += '<tr><td><strong>Service:</strong></td><td>' + vuln.service + '</td></tr>';
+        if (vuln.cvss_score) html += '<tr><td><strong>CVSS Score:</strong></td><td>' + vuln.cvss_score + '</td></tr>';
+        html += '</table>';
+        html += '</div>';
+        
+        html += '<div class="col-md-6">';
+        html += '<h6>Technical Details</h6>';
+        if (vuln.description) {
+            html += '<p class="small">' + vuln.description + '</p>';
+        }
+        if (vuln.cve_id) {
+            html += '<p><strong>CVE:</strong> <a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=' + vuln.cve_id + '" target="_blank">' + vuln.cve_id + '</a></p>';
+        }
+        if (vuln.solution) {
+            html += '<h6>Solution</h6>';
+            html += '<p class="small">' + vuln.solution + '</p>';
+        }
+        if (vuln.references && vuln.references.length > 0) {
+            html += '<h6>References</h6>';
+            html += '<ul class="small">';
+            vuln.references.forEach(function(ref) {
+                html += '<li><a href="' + ref + '" target="_blank">' + ref + '</a></li>';
+            });
+            html += '</ul>';
+        }
+        html += '</div>';
+        html += '</div>';
+        
+        $('#vulnDetailsContent').html(html);
+        $('#vulnDetailsModal').modal('show');
+    });
+    
+    // Apply filters
+    $('#applyFilters').click(function() {
+        var selectedSeverities = [];
+        $('.severity-filter:checked').each(function() {
+            selectedSeverities.push($(this).val());
+        });
+        
+        var targetFilter = $('#targetFilter').val().toLowerCase();
+        
+        $('#vulnTable tbody tr').each(function() {
+            var severity = $(this).data('severity');
+            var target = $(this).data('target').toLowerCase();
+            
+            var showSeverity = selectedSeverities.length === 0 || selectedSeverities.includes(severity);
+            var showTarget = !targetFilter || target.includes(targetFilter);
+            
+            $(this).toggle(showSeverity && showTarget);
+        });
+        
+        $('#filterModal').modal('hide');
+    });
+    
+    // Clear filters
+    $('#clearFilters').click(function() {
+        $('.severity-filter').prop('checked', true);
+        $('#targetFilter').val('');
+        $('#vulnTable tbody tr').show();
+        $('#filterModal').modal('hide');
+    });
+    
+    // Export vulnerabilities
+    $('#exportBtn').click(function() {
+        // This would typically generate and download a CSV/PDF report
+        alert('Export functionality would be implemented here');
+    });
+    
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}

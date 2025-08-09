@@ -1,0 +1,507 @@
+{% extends "base.html" %}
+
+{% block title %}Remediation - VulnSleuth{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2 mb-0">
+            <i class="fas fa-tools me-2"></i>Auto-Remediation
+        </h1>
+        <div>
+            <button class="btn btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#remediationSettingsModal">
+                <i class="fas fa-cog me-2"></i>Settings
+            </button>
+            <button class="btn btn-primary" id="analyzeBtn">
+                <i class="fas fa-search me-2"></i>Analyze Vulnerabilities
+            </button>
+        </div>
+    </div>
+
+    <!-- Remediation Status -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="card-title mb-0">{{ stats.pending_actions or 0 }}</h4>
+                            <p class="card-text">Pending Actions</p>
+                        </div>
+                        <i class="fas fa-clock fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="card-title mb-0">{{ stats.completed_actions or 0 }}</h4>
+                            <p class="card-text">Completed</p>
+                        </div>
+                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="card-title mb-0">{{ stats.failed_actions or 0 }}</h4>
+                            <p class="card-text">Failed</p>
+                        </div>
+                        <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card text-white bg-danger">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="card-title mb-0">{{ stats.manual_required or 0 }}</h4>
+                            <p class="card-text">Manual Required</p>
+                        </div>
+                        <i class="fas fa-user fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Approvals -->
+    {% if pending_approvals %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-clock me-2"></i>Pending Approvals ({{ pending_approvals|length }})
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Vulnerability</th>
+                            <th>Target</th>
+                            <th>Proposed Action</th>
+                            <th>Risk Level</th>
+                            <th>Impact</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for approval in pending_approvals %}
+                        <tr>
+                            <td>
+                                <strong>{{ approval.vulnerability_name }}</strong>
+                                <br><small class="text-muted">{{ approval.vulnerability_description[:100] }}...</small>
+                            </td>
+                            <td>{{ approval.target }}</td>
+                            <td>
+                                <span class="badge bg-info">{{ approval.action_type }}</span>
+                                <br><small>{{ approval.action_description }}</small>
+                            </td>
+                            <td>
+                                <span class="vulnerability-badge {{ approval.risk_level.lower() }}">
+                                    {{ approval.risk_level.upper() }}
+                                </span>
+                            </td>
+                            <td>
+                                <small>{{ approval.impact_description }}</small>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-success approve-action" 
+                                            data-action-id="{{ approval.id }}"
+                                            data-bs-toggle="tooltip" title="Approve">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger reject-action" 
+                                            data-action-id="{{ approval.id }}"
+                                            data-bs-toggle="tooltip" title="Reject">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                    <button class="btn btn-outline-info view-details" 
+                                            data-action='{{ approval|tojson }}'
+                                            data-bs-toggle="tooltip" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Remediation History -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-history me-2"></i>Remediation History
+                    </h5>
+                </div>
+                <div class="col-auto">
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" id="searchHistory" 
+                               placeholder="Search history...">
+                        <button class="btn btn-outline-secondary" type="button">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="historyTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Vulnerability</th>
+                            <th>Target</th>
+                            <th>Action Taken</th>
+                            <th>Status</th>
+                            <th>User</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Sample remediation history -->
+                        <tr>
+                            <td><small>2025-08-09 14:30</small></td>
+                            <td>
+                                <strong>SQL Injection</strong>
+                                <br><small class="text-muted">Login form vulnerable to SQL injection</small>
+                            </td>
+                            <td>192.168.1.100</td>
+                            <td>
+                                <span class="badge bg-info">Patch Applied</span>
+                                <br><small>Updated input validation</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-success">Success</span>
+                            </td>
+                            <td>admin</td>
+                            <td>
+                                <button class="btn btn-outline-info btn-sm view-action-details" 
+                                        data-action-id="1">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <td><small>2025-08-09 12:15</small></td>
+                            <td>
+                                <strong>Outdated SSL/TLS</strong>
+                                <br><small class="text-muted">Server using TLS 1.1</small>
+                            </td>
+                            <td>web.example.com</td>
+                            <td>
+                                <span class="badge bg-info">Config Update</span>
+                                <br><small>Updated to TLS 1.3</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-success">Success</span>
+                            </td>
+                            <td>system</td>
+                            <td>
+                                <button class="btn btn-outline-info btn-sm view-action-details" 
+                                        data-action-id="2">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <td><small>2025-08-09 10:45</small></td>
+                            <td>
+                                <strong>Default Credentials</strong>
+                                <br><small class="text-muted">Admin panel using default login</small>
+                            </td>
+                            <td>192.168.1.50</td>
+                            <td>
+                                <span class="badge bg-warning">Manual Required</span>
+                                <br><small>Password reset needed</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-warning">Pending</span>
+                            </td>
+                            <td>-</td>
+                            <td>
+                                <button class="btn btn-outline-info btn-sm view-action-details" 
+                                        data-action-id="3">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- No Data State (if no remediation actions) -->
+    {% if not pending_approvals and not stats.completed_actions %}
+    <div class="text-center py-5">
+        <i class="fas fa-tools fa-4x text-muted mb-4"></i>
+        <h3 class="text-muted">No Remediation Actions</h3>
+        <p class="text-muted mb-4">Run vulnerability scans to identify issues that can be automatically remediated.</p>
+        <a href="{{ url_for('new_scan') }}" class="btn btn-primary me-2">
+            <i class="fas fa-search me-2"></i>Run Scan
+        </a>
+        <button class="btn btn-outline-primary" id="analyzeBtn2">
+            <i class="fas fa-search me-2"></i>Analyze Existing Results
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Action Details Modal -->
+<div class="modal fade" id="actionDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Remediation Action Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="actionDetailsContent">
+                    <!-- Content loaded dynamically -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary">Execute Action</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Remediation Settings Modal -->
+<div class="modal fade" id="remediationSettingsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Remediation Settings</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="remediationSettingsForm">
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="autoRemediationEnabled" checked>
+                            <label class="form-check-label" for="autoRemediationEnabled">
+                                Enable Auto-Remediation
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Auto-Execute Actions</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="autoExecuteLow">
+                            <label class="form-check-label" for="autoExecuteLow">
+                                Low risk actions (automatic)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="autoExecuteMedium">
+                            <label class="form-check-label" for="autoExecuteMedium">
+                                Medium risk actions (with approval)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="autoExecuteHigh" disabled>
+                            <label class="form-check-label" for="autoExecuteHigh">
+                                High risk actions (manual only)
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="createBackups" checked>
+                            <label class="form-check-label" for="createBackups">
+                                Create backups before changes
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="notifyChanges" checked>
+                            <label class="form-check-label" for="notifyChanges">
+                                Send notifications for all changes
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="approvalTimeout" class="form-label">Approval Timeout (hours)</label>
+                        <input type="number" class="form-control" id="approvalTimeout" value="24" min="1" max="168">
+                        <div class="form-text">Actions expire if not approved within this time</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveSettingsBtn">
+                    <i class="fas fa-save me-2"></i>Save Settings
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Search history
+    $('#searchHistory').on('input', function() {
+        var searchTerm = $(this).val().toLowerCase();
+        $('#historyTable tbody tr').each(function() {
+            var rowText = $(this).text().toLowerCase();
+            $(this).toggle(rowText.includes(searchTerm));
+        });
+    });
+    
+    // Analyze vulnerabilities
+    $('#analyzeBtn, #analyzeBtn2').click(function() {
+        var button = $(this);
+        button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Analyzing...');
+        
+        // Simulate analysis
+        setTimeout(function() {
+            button.prop('disabled', false).html('<i class="fas fa-search me-2"></i>Analyze Vulnerabilities');
+            
+            // Show results
+            var alertHtml = '<div class="alert alert-info alert-dismissible fade show" role="alert">' +
+                          '<i class="fas fa-info-circle me-2"></i>Analysis complete: Found 3 vulnerabilities that can be auto-remediated. Check pending approvals above.' +
+                          '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                          '</div>';
+            $('.container-fluid').prepend(alertHtml);
+            
+            setTimeout(function() {
+                $('.alert').fadeOut();
+            }, 5000);
+        }, 3000);
+    });
+    
+    // Approve action
+    $('.approve-action').click(function() {
+        var actionId = $(this).data('action-id');
+        if (confirm('Are you sure you want to approve this remediation action?')) {
+            $(this).closest('tr').fadeOut();
+            
+            var alertHtml = '<div class="alert alert-success alert-dismissible fade show" role="alert">' +
+                          '<i class="fas fa-check-circle me-2"></i>Remediation action approved and queued for execution.' +
+                          '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                          '</div>';
+            $('.container-fluid').prepend(alertHtml);
+        }
+    });
+    
+    // Reject action
+    $('.reject-action').click(function() {
+        var actionId = $(this).data('action-id');
+        var reason = prompt('Please provide a reason for rejection:');
+        if (reason) {
+            $(this).closest('tr').fadeOut();
+            
+            var alertHtml = '<div class="alert alert-warning alert-dismissible fade show" role="alert">' +
+                          '<i class="fas fa-exclamation-triangle me-2"></i>Remediation action rejected: ' + reason +
+                          '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                          '</div>';
+            $('.container-fluid').prepend(alertHtml);
+        }
+    });
+    
+    // View action details
+    $('.view-details, .view-action-details').click(function() {
+        var actionData = $(this).attr('data-action');
+        var actionId = $(this).data('action-id');
+        
+        // Sample details
+        var html = '<div class="row">';
+        html += '<div class="col-md-6">';
+        html += '<h6>Action Information</h6>';
+        html += '<table class="table table-sm">';
+        html += '<tr><td><strong>ID:</strong></td><td>' + (actionId || 'N/A') + '</td></tr>';
+        html += '<tr><td><strong>Type:</strong></td><td>Automated Fix</td></tr>';
+        html += '<tr><td><strong>Risk Level:</strong></td><td><span class="badge bg-warning">Medium</span></td></tr>';
+        html += '<tr><td><strong>Estimated Time:</strong></td><td>2-5 minutes</td></tr>';
+        html += '</table>';
+        html += '</div>';
+        
+        html += '<div class="col-md-6">';
+        html += '<h6>Technical Details</h6>';
+        html += '<table class="table table-sm">';
+        html += '<tr><td><strong>Method:</strong></td><td>Configuration Update</td></tr>';
+        html += '<tr><td><strong>Files Affected:</strong></td><td>1-3 files</td></tr>';
+        html += '<tr><td><strong>Backup Required:</strong></td><td>Yes</td></tr>';
+        html += '<tr><td><strong>Rollback Available:</strong></td><td>Yes</td></tr>';
+        html += '</table>';
+        html += '</div>';
+        html += '</div>';
+        
+        html += '<div class="mt-3">';
+        html += '<h6>Execution Steps</h6>';
+        html += '<ol>';
+        html += '<li>Create backup of current configuration</li>';
+        html += '<li>Apply security patch or configuration change</li>';
+        html += '<li>Verify fix effectiveness</li>';
+        html += '<li>Update vulnerability status</li>';
+        html += '</ol>';
+        html += '</div>';
+        
+        $('#actionDetailsContent').html(html);
+        $('#actionDetailsModal').modal('show');
+    });
+    
+    // Save settings
+    $('#saveSettingsBtn').click(function() {
+        var button = $(this);
+        button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Saving...');
+        
+        setTimeout(function() {
+            button.prop('disabled', false).html('<i class="fas fa-save me-2"></i>Save Settings');
+            $('#remediationSettingsModal').modal('hide');
+            
+            var alertHtml = '<div class="alert alert-success alert-dismissible fade show" role="alert">' +
+                          '<i class="fas fa-check-circle me-2"></i>Remediation settings saved successfully!' +
+                          '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                          '</div>';
+            $('.container-fluid').prepend(alertHtml);
+            
+            setTimeout(function() {
+                $('.alert').fadeOut();
+            }, 3000);
+        }, 1000);
+    });
+    
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Scan Status - VulnSleuth{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2 mb-0">
+            <i class="fas fa-search me-2"></i>Scan Status
+        </h1>
+        <div>
+            <a href="{{ url_for('scans') }}" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-list me-2"></i>All Scans
+            </a>
+            {% if scan_info.status == 'running' %}
+            <button class="btn btn-outline-danger" id="stopScan">
+                <i class="fas fa-stop me-2"></i>Stop Scan
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Scan Information -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Scan Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Scan ID:</strong></td>
+                                    <td>{{ scan_id }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Target:</strong></td>
+                                    <td>{{ scan_info.target or 'N/A' }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Status:</strong></td>
+                                    <td>
+                                        <span class="badge bg-{% if scan_info.status == 'completed' %}success{% elif scan_info.status == 'running' %}warning{% elif scan_info.status == 'failed' %}danger{% else %}secondary{% endif %}">
+                                            {{ scan_info.status.upper() }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Started:</strong></td>
+                                    <td>{{ scan_info.started_at or 'Unknown' }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Scan Type:</strong></td>
+                                    <td>{{ scan_info.scan_type or 'Network' }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Progress:</strong></td>
+                                    <td>
+                                        <div class="progress">
+                                            <div class="progress-bar" role="progressbar" 
+                                                 style="width: {{ scan_info.progress or 0 }}%" 
+                                                 id="progressBar">
+                                                {{ scan_info.progress or 0 }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Duration:</strong></td>
+                                    <td id="duration">{{ scan_info.duration or 'Calculating...' }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Vulnerabilities:</strong></td>
+                                    <td id="vulnCount">{{ scan_info.vulnerability_count or 0 }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>Progress Overview
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <div class="display-4 text-{% if scan_info.status == 'completed' %}success{% elif scan_info.status == 'running' %}warning{% else %}muted{% endif %}">
+                            <i class="fas fa-{% if scan_info.status == 'completed' %}check-circle{% elif scan_info.status == 'running' %}spinner fa-spin{% else %}clock{% endif %}"></i>
+                        </div>
+                    </div>
+                    
+                    {% if scan_info.status == 'running' %}
+                    <div class="mb-3">
+                        <h5 class="text-warning">Scan in Progress</h5>
+                        <p class="text-muted">Please wait while the scan completes...</p>
+                    </div>
+                    {% elif scan_info.status == 'completed' %}
+                    <div class="mb-3">
+                        <h5 class="text-success">Scan Completed</h5>
+                        <p class="text-muted">Scan finished successfully</p>
+                    </div>
+                    {% elif scan_info.status == 'failed' %}
+                    <div class="mb-3">
+                        <h5 class="text-danger">Scan Failed</h5>
+                        <p class="text-muted">{{ scan_info.error_message or 'Unknown error occurred' }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if scan_info.status == 'completed' and scan_info.results %}
+                    <a href="{{ url_for('vulnerabilities') }}" class="btn btn-primary">
+                        <i class="fas fa-bug me-2"></i>View Results
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Log Output (if scan is running) -->
+    {% if scan_info.status == 'running' %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-terminal me-2"></i>Live Output
+            </h5>
+        </div>
+        <div class="card-body">
+            <div id="liveOutput" style="height: 300px; overflow-y: auto; background-color: #000; color: #00ff00; font-family: monospace; padding: 10px;">
+                <div id="outputContent">
+                    Initializing scan...<br>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Scan Results (if completed) -->
+    {% if scan_info.status == 'completed' and scan_info.results %}
+    <div class="card">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-bug me-2"></i>Vulnerabilities Found ({{ scan_info.results|length }})
+                    </h5>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-outline-primary btn-sm" id="exportResults">
+                        <i class="fas fa-download me-2"></i>Export Results
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Severity</th>
+                            <th>Vulnerability</th>
+                            <th>Target</th>
+                            <th>Port</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vuln in scan_info.results %}
+                        <tr>
+                            <td>
+                                <span class="vulnerability-badge {{ vuln.severity }}">
+                                    {{ vuln.severity.upper() }}
+                                </span>
+                            </td>
+                            <td><strong>{{ vuln.name or vuln.title or 'Unknown' }}</strong></td>
+                            <td>{{ vuln.target or vuln.host or 'N/A' }}</td>
+                            <td>{{ vuln.port or 'N/A' }}</td>
+                            <td>
+                                <small>{{ vuln.description[:100] }}{% if vuln.description and vuln.description|length > 100 %}...{% endif %}</small>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Auto-refresh for running scans
+    {% if scan_info.status == 'running' %}
+    var refreshInterval = setInterval(function() {
+        $.get('{{ url_for("scan_status", scan_id=scan_id) }}?ajax=1', function(data) {
+            if (data.status !== 'running') {
+                clearInterval(refreshInterval);
+                location.reload();
+            } else {
+                // Update progress
+                $('#progressBar').css('width', data.progress + '%').text(data.progress + '%');
+                $('#vulnCount').text(data.vulnerability_count || 0);
+                $('#duration').text(data.duration || 'Calculating...');
+                
+                // Update live output
+                if (data.log_output) {
+                    $('#outputContent').append(data.log_output + '<br>');
+                    $('#liveOutput').scrollTop($('#liveOutput')[0].scrollHeight);
+                }
+            }
+        }).fail(function() {
+            clearInterval(refreshInterval);
+        });
+    }, 2000); // Refresh every 2 seconds
+    {% endif %}
+    
+    // Stop scan
+    $('#stopScan').click(function() {
+        if (confirm('Are you sure you want to stop this scan?')) {
+            $.post('{{ url_for("stop_scan", scan_id=scan_id) }}', function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert('Failed to stop scan: ' + response.error);
+                }
+            });
+        }
+    });
+    
+    // Export results
+    $('#exportResults').click(function() {
+        window.location.href = '{{ url_for("export_scan", scan_id=scan_id) }}';
+    });
+});
+</script>
+{% endblock %}
