@@ -45,7 +45,8 @@ BANNER = f"""{Fore.CYAN}
      ░                                                                                  
 {Style.RESET_ALL}
 {Fore.GREEN}Advanced Vulnerability Scanner & Security Assessment Tool{Style.RESET_ALL}
-{Fore.YELLOW}Version 2.0.0 | Ethical Hacking Framework{Style.RESET_ALL}
+{Fore.YELLOW}Ethical Hacking Framework{Style.RESET_ALL}
+{Fore.MAGENTA}Author: Devdas | GitHub: https://github.com/devdas36{Style.RESET_ALL}
 """
 
 @click.group(invoke_without_command=True)
@@ -513,7 +514,6 @@ def generate(ctx, config_file, plugin_template, report_template):
         sample_config = """# VulnSleuth Sample Configuration
 [general]
 name = VulnSleuth
-version = 2.0.0
 
 [database]
 db_path = data/vulnsleuth.db

@@ -6,7 +6,7 @@ This directory contains the comprehensive test suite for VulnSleuth. The tests c
 
 ## Test Structure
 
-```
+bash```
 tests/
 ├── __init__.py              # Test package initialization
 ├── conftest.py             # Test configuration and utilities  
@@ -14,17 +14,19 @@ tests/
 ├── test_database.py        # Database operations tests
 ├── test_plugins.py         # Plugin system tests
 └── run_tests.py           # Test runner script
-```
+``
 
 ## Running Tests
 
 ### Run All Tests
+
 ```bash
 cd tests
 python run_tests.py
 ```
 
 ### Run Specific Test Module
+
 ```bash
 python run_tests.py engine     # Run engine tests
 python run_tests.py database   # Run database tests  
@@ -32,6 +34,7 @@ python run_tests.py plugins    # Run plugin tests
 ```
 
 ### Run Individual Test Classes
+
 ```bash
 python -m unittest test_engine.TestScanEngine
 python -m unittest test_database.TestDatabaseManager
@@ -41,7 +44,8 @@ python -m unittest test_plugins.TestPluginSystem
 ## Test Categories
 
 ### Core Engine Tests (`test_engine.py`)
-- **TestScanEngine**: Tests for main scanning engine
+
+- __TestScanEngine__: Tests for main scanning engine
   - Scan initialization and execution
   - Target processing and validation
   - Plugin management integration
@@ -49,13 +53,14 @@ python -m unittest test_plugins.TestPluginSystem
   - Error handling
   - Concurrent scanning
 
-- **TestScanConfiguration**: Tests for configuration management
+- __TestScanConfiguration__: Tests for configuration management
   - Configuration loading and validation
   - Default value fallbacks
   - Scan option processing
 
 ### Database Tests (`test_database.py`)
-- **TestDatabaseManager**: Tests for database operations
+
+- __TestDatabaseManager__: Tests for database operations
   - Database initialization and schema creation
   - CRUD operations for scans, targets, vulnerabilities
   - Scan results storage and retrieval
@@ -64,25 +69,26 @@ python -m unittest test_plugins.TestPluginSystem
   - Backup and recovery
   - Performance testing
 
-- **TestDatabaseMigration**: Tests for schema migrations
+- __TestDatabaseMigration__: Tests for schema migrations
   - Version tracking
   - Migration detection
   - Schema upgrade processes
 
 ### Plugin Tests (`test_plugins.py`)
-- **TestPluginSystem**: Tests for plugin architecture
+
+- __TestPluginSystem__: Tests for plugin architecture
   - Plugin loading and management
   - Metadata validation
   - Execution context handling
   - Error handling in plugins
   - Plugin filtering by category
 
-- **TestBuiltinPlugins**: Tests for built-in plugins
+- __TestBuiltinPlugins__: Tests for built-in plugins
   - Local system checker
   - Network scanner
   - Web application scanner
 
-- **TestPluginDevelopment**: Tests for plugin development utilities
+- __TestPluginDevelopment__: Tests for plugin development utilities
   - Template structure validation
   - Metadata requirements
   - Finding severity validation
@@ -92,6 +98,7 @@ python -m unittest test_plugins.TestPluginSystem
 The `conftest.py` file provides:
 
 ### VulnSleuthTestCase Base Class
+
 ```python
 class VulnSleuthTestCase(unittest.TestCase):
     """Base test case with common utilities"""
@@ -112,6 +119,7 @@ class VulnSleuthTestCase(unittest.TestCase):
 ```
 
 ### Mock Configuration
+
 ```python
 mock_config = {
     'database': {
@@ -133,11 +141,13 @@ mock_config = {
 ## Writing New Tests
 
 ### Test Naming Convention
+
 - Test files: `test_<module_name>.py`
 - Test classes: `Test<ClassName>`
 - Test methods: `test_<functionality_description>`
 
 ### Example Test Class
+
 ```python
 class TestNewFeature(VulnSleuthTestCase):
     """Test cases for new feature"""
@@ -167,12 +177,12 @@ class TestNewFeature(VulnSleuthTestCase):
 
 ### Testing Guidelines
 
-1. **Isolation**: Each test should be independent and not rely on other tests
-2. **Cleanup**: Always clean up resources in `tearDown()` or use context managers
-3. **Mocking**: Use mocks for external dependencies (network, file system, etc.)
-4. **Coverage**: Test both success and failure scenarios
-5. **Performance**: Include performance tests for critical paths
-6. **Documentation**: Document complex test scenarios
+1. __Isolation__: Each test should be independent and not rely on other tests
+2. __Cleanup__: Always clean up resources in `tearDown()` or use context managers
+3. __Mocking__: Use mocks for external dependencies (network, file system, etc.)
+4. __Coverage__: Test both success and failure scenarios
+5. __Performance__: Include performance tests for critical paths
+6. __Documentation__: Document complex test scenarios
 
 ### Mock Usage Examples
 
@@ -195,16 +205,19 @@ with patch('sqlite3.connect') as mock_connect:
 ## Test Data Management
 
 ### Temporary Files
+
 - Use `tempfile.mkdtemp()` for temporary directories
 - Clean up in `tearDown()` method
 - Use context managers when possible
 
 ### Test Database
+
 - Each test gets isolated SQLite database
 - Automatically cleaned up after test completion
 - Pre-populated with minimal required data
 
 ### Mock Data Generators
+
 ```python
 def create_mock_scan(self):
     return {
@@ -227,12 +240,14 @@ def create_mock_vulnerability(self):
 ## Continuous Integration
 
 ### Test Requirements
+
 - All tests must pass before merging
 - Minimum 80% code coverage required
 - No skipped tests without justification
 - Performance tests within acceptable limits
 
 ### CI Configuration
+
 ```yaml
 # Example CI pipeline
 test:
@@ -246,11 +261,13 @@ test:
 ## Debugging Tests
 
 ### Verbose Output
+
 ```bash
 python -m unittest -v test_module.TestClass.test_method
 ```
 
 ### Debug Mode
+
 ```python
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -260,6 +277,7 @@ unittest.main(verbosity=2)
 ```
 
 ### Test Isolation Issues
+
 ```bash
 # Run tests in random order to catch isolation issues
 python -m pytest --random-order tests/
@@ -268,6 +286,7 @@ python -m pytest --random-order tests/
 ## Performance Testing
 
 ### Benchmarking
+
 ```python
 def test_scan_performance(self):
     """Test scan completes within time limit"""
@@ -283,6 +302,7 @@ def test_scan_performance(self):
 ```
 
 ### Memory Usage
+
 ```python
 def test_memory_usage(self):
     """Test memory usage stays within limits"""
@@ -304,13 +324,13 @@ def test_memory_usage(self):
 
 ## Best Practices
 
-1. **Test First**: Write tests before implementing features when possible
-2. **Small Tests**: Keep tests focused on single functionality
-3. **Clear Names**: Use descriptive test method names
-4. **Arrange-Act-Assert**: Structure tests clearly
-5. **Mock External**: Mock all external dependencies
-6. **Clean State**: Ensure tests don't affect each other
-7. **Error Cases**: Test error conditions thoroughly
-8. **Performance**: Include performance regression tests
-9. **Documentation**: Document complex test scenarios
-10. **Maintenance**: Keep tests updated with code changes
+1. __Test First__: Write tests before implementing features when possible
+2. __Small Tests__: Keep tests focused on single functionality
+3. __Clear Names__: Use descriptive test method names
+4. __Arrange-Act-Assert__: Structure tests clearly
+5. __Mock External__: Mock all external dependencies
+6. __Clean State__: Ensure tests don't affect each other
+7. __Error Cases__: Test error conditions thoroughly
+8. __Performance__: Include performance regression tests
+9. __Documentation__: Document complex test scenarios
+10. __Maintenance__: Keep tests updated with code changes

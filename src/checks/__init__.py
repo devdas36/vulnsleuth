@@ -15,5 +15,3 @@ __all__ = [
     'NetworkSecurityChecker', 
     'WebAppSecurityChecker'
 ]
-
-__version__ = '2.0.0'

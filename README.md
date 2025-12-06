@@ -1,4 +1,4 @@
-# VulnSleuth 2.0.0 - Advanced Vulnerability Scanner
+# VulnSleuth - Advanced Vulnerability Scanner
 
 A comprehensive vulnerability scanner with both CLI and web dashboard interfaces for ethical security testing and automated vulnerability assessment.
 

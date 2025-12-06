@@ -414,7 +414,6 @@ def settings():
         current_settings = {
             'general': {
                 'app_name': 'VulnSleuth',
-                'version': '2.0.0',
                 'theme': 'light',
                 'language': 'en',
                 'timezone': 'UTC'
