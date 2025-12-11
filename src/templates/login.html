@@ -136,7 +136,7 @@
                                     <i class="fas fa-user"></i>
                                 </span>
                                 <input type="text" class="form-control" name="username" 
-                                       placeholder="Username" required value="admin">
+                                       placeholder="Username" required autocomplete="username">
                             </div>
                             
                             <div class="input-group">
@@ -144,7 +144,7 @@
                                     <i class="fas fa-lock"></i>
                                 </span>
                                 <input type="password" class="form-control" name="password" 
-                                       placeholder="Password" required value="vulnsleuth123">
+                                       placeholder="Password" required autocomplete="current-password">
                             </div>
                             
                             <div class="d-grid">
@@ -154,12 +154,16 @@
                             </div>
                         </form>
                         
+                        {% if show_create_account %}
                         <div class="text-center mt-4">
-                            <small class="text-muted">
-                                <i class="fas fa-info-circle"></i> 
-                                Default credentials: admin/vulnsleuth123
-                            </small>
+                            <p class="mb-0">
+                                Don't have an account? 
+                                <a href="{{ url_for('register') }}" class="text-decoration-none">
+                                    <strong>Create Account</strong>
+                                </a>
+                            </p>
                         </div>
+                        {% endif %}
                         
                         <div class="text-center mt-3">
                             <small class="text-muted">VulnSleuth</small>

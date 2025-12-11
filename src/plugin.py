@@ -493,6 +493,11 @@ class PluginManager:
         with self.lock:
             return self.plugin_metadata.get(plugin_name)
     
+    def get_all_plugins(self) -> List[VulnPlugin]:
+        """Get all loaded plugin instances"""
+        with self.lock:
+            return list(self.loaded_plugins.values())
+    
     def reload_plugins(self):
         """Reload all plugins"""
         self.logger.info("Reloading all plugins...")

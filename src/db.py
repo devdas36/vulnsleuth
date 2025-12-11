@@ -11,6 +11,7 @@ License: MIT
 import sqlite3
 import json
 import logging
+import uuid
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Tuple, Union
 from dataclasses import dataclass, asdict
@@ -275,6 +276,49 @@ class DatabaseManager:
                     )
                 ''')
                 
+                # Create users table for web authentication
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS users (
+                        user_id TEXT PRIMARY KEY,
+                        username TEXT UNIQUE NOT NULL,
+                        email TEXT UNIQUE NOT NULL,
+                        password_hash TEXT NOT NULL,
+                        is_active INTEGER DEFAULT 1,
+                        is_admin INTEGER DEFAULT 0,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        last_login TEXT,
+                        login_count INTEGER DEFAULT 0,
+                        failed_login_attempts INTEGER DEFAULT 0,
+                        locked_until TEXT
+                    )
+                ''')
+                
+                # Create user sessions table
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS user_sessions (
+                        session_id TEXT PRIMARY KEY,
+                        user_id TEXT NOT NULL,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        expires_at TEXT NOT NULL,
+                        ip_address TEXT,
+                        user_agent TEXT,
+                        FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
+                    )
+                ''')
+                
+                # Create user activity log table
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS user_activity (
+                        activity_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id TEXT NOT NULL,
+                        activity_type TEXT NOT NULL,
+                        description TEXT,
+                        ip_address TEXT,
+                        timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
+                    )
+                ''')
+                
                 # Create indexes for better performance
                 self._create_indexes(cursor)
                 
@@ -298,6 +342,13 @@ class DatabaseManager:
             # Vulnerabilities table indexes
             'CREATE INDEX IF NOT EXISTS idx_vulns_scan ON vulnerabilities (scan_id)',
             'CREATE INDEX IF NOT EXISTS idx_vulns_target ON vulnerabilities (target)',
+            
+            # Users table indexes
+            'CREATE INDEX IF NOT EXISTS idx_users_username ON users (username)',
+            'CREATE INDEX IF NOT EXISTS idx_users_email ON users (email)',
+            'CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions (user_id)',
+            'CREATE INDEX IF NOT EXISTS idx_user_activity_user ON user_activity (user_id)',
+            'CREATE INDEX IF NOT EXISTS idx_user_activity_timestamp ON user_activity (timestamp)',
             'CREATE INDEX IF NOT EXISTS idx_vulns_severity ON vulnerabilities (severity)',
             'CREATE INDEX IF NOT EXISTS idx_vulns_type ON vulnerabilities (vulnerability_type)',
             'CREATE INDEX IF NOT EXISTS idx_vulns_status ON vulnerabilities (status)',
@@ -976,6 +1027,189 @@ class DatabaseManager:
         except Exception as e:
             self.logger.error(f"Database maintenance failed: {str(e)}")
             return {'error': str(e)}
+    
+    # User management methods
+    def create_user(self, username: str, email: str, password_hash: str, is_admin: bool = False) -> Optional[str]:
+        """
+        Create a new user account
+        
+        Args:
+            username: Unique username
+            email: Unique email address
+            password_hash: Hashed password
+            is_admin: Whether user has admin privileges
+            
+        Returns:
+            User ID if successful, None otherwise
+        """
+        try:
+            user_id = f"user_{uuid.uuid4().hex[:12]}"
+            
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT INTO users (user_id, username, email, password_hash, is_admin)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (user_id, username, email, password_hash, 1 if is_admin else 0))
+                conn.commit()
+            
+            self.logger.info(f"User created: {username}")
+            return user_id
+            
+        except sqlite3.IntegrityError as e:
+            self.logger.error(f"User creation failed (duplicate): {str(e)}")
+            return None
+        except Exception as e:
+            self.logger.error(f"User creation failed: {str(e)}")
+            return None
+    
+    def get_user_by_username(self, username: str) -> Optional[Dict[str, Any]]:
+        """Get user by username"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT user_id, username, email, password_hash, is_active, is_admin, 
+                           created_at, last_login, login_count, failed_login_attempts, locked_until
+                    FROM users WHERE username = ?
+                ''', (username,))
+                
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        'user_id': row[0],
+                        'username': row[1],
+                        'email': row[2],
+                        'password_hash': row[3],
+                        'is_active': bool(row[4]),
+                        'is_admin': bool(row[5]),
+                        'created_at': row[6],
+                        'last_login': row[7],
+                        'login_count': row[8],
+                        'failed_login_attempts': row[9],
+                        'locked_until': row[10]
+                    }
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get user: {str(e)}")
+            return None
+    
+    def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        """Get user by email"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT user_id, username, email, password_hash, is_active, is_admin, 
+                           created_at, last_login, login_count, failed_login_attempts, locked_until
+                    FROM users WHERE email = ?
+                ''', (email,))
+                
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        'user_id': row[0],
+                        'username': row[1],
+                        'email': row[2],
+                        'password_hash': row[3],
+                        'is_active': bool(row[4]),
+                        'is_admin': bool(row[5]),
+                        'created_at': row[6],
+                        'last_login': row[7],
+                        'login_count': row[8],
+                        'failed_login_attempts': row[9],
+                        'locked_until': row[10]
+                    }
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get user by email: {str(e)}")
+            return None
+    
+    def update_user_login(self, user_id: str, success: bool = True):
+        """Update user login information"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                if success:
+                    cursor.execute('''
+                        UPDATE users 
+                        SET last_login = ?, 
+                            login_count = login_count + 1,
+                            failed_login_attempts = 0
+                        WHERE user_id = ?
+                    ''', (datetime.now().isoformat(), user_id))
+                else:
+                    cursor.execute('''
+                        UPDATE users 
+                        SET failed_login_attempts = failed_login_attempts + 1
+                        WHERE user_id = ?
+                    ''', (user_id,))
+                
+                conn.commit()
+                
+        except Exception as e:
+            self.logger.error(f"Failed to update user login: {str(e)}")
+    
+    def get_all_users(self) -> List[Dict[str, Any]]:
+        """Get all users"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT user_id, username, email, is_active, is_admin, 
+                           created_at, last_login, login_count
+                    FROM users
+                    ORDER BY created_at DESC
+                ''')
+                
+                users = []
+                for row in cursor.fetchall():
+                    users.append({
+                        'user_id': row[0],
+                        'username': row[1],
+                        'email': row[2],
+                        'is_active': bool(row[3]),
+                        'is_admin': bool(row[4]),
+                        'created_at': row[5],
+                        'last_login': row[6],
+                        'login_count': row[7]
+                    })
+                
+                return users
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get all users: {str(e)}")
+            return []
+    
+    def user_exists(self) -> bool:
+        """Check if any users exist in the database"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('SELECT COUNT(*) FROM users')
+                count = cursor.fetchone()[0]
+                return count > 0
+                
+        except Exception as e:
+            self.logger.error(f"Failed to check if users exist: {str(e)}")
+            return False
+    
+    def log_user_activity(self, user_id: str, activity_type: str, description: str, ip_address: str = None):
+        """Log user activity"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT INTO user_activity (user_id, activity_type, description, ip_address)
+                    VALUES (?, ?, ?, ?)
+                ''', (user_id, activity_type, description, ip_address))
+                conn.commit()
+                
+        except Exception as e:
+            self.logger.error(f"Failed to log user activity: {str(e)}")
 
 if __name__ == "__main__":
     # Test database operations

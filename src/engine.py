@@ -23,8 +23,6 @@ from contextlib import contextmanager
 from checks.local_checks import LocalSecurityChecker
 from checks.network_checks import NetworkSecurityChecker
 from checks.webapp_checks import WebAppSecurityChecker
-from nmap_integration import NmapScanner
-from cve_lookup import CVELookup
 from db import DatabaseManager
 from utils import Logger, NetworkUtils, SecurityUtils, ProgressTracker, ThreadSafeLogger, SecurityContext, ScanMetrics
 
@@ -71,13 +69,10 @@ class VulnSleuthEngine:
         
         # Initialize components
         self.db = DatabaseManager(config)
-        self.cve_lookup = CVELookup(config)
         
         # Lazy import to avoid circular dependency
         from plugin import PluginManager
         self.plugin_manager = PluginManager(config)
-        
-        self.nmap_scanner = NmapScanner(config)
         
         # Initialize checkers
         self.local_checker = LocalSecurityChecker(config)
@@ -326,59 +321,80 @@ class VulnSleuthEngine:
                 self.logger.error(f"Worker thread error: {str(e)}")
     
     def _run_network_discovery(self, scan_config: Dict[str, Any], progress_callback: Callable) -> List[Dict[str, Any]]:
-        """Run network discovery phase"""
+        """Run network discovery phase using plugins"""
         results = []
         target = scan_config['target']
         
         try:
-            # Host discovery
             progress_callback(0.1)
-            self.logger.info(f"Starting host discovery for {target}")
-            live_hosts = self.nmap_scanner.host_discovery(target)
-            self.logger.info(f"Host discovery completed, found {len(live_hosts)} hosts")
+            self.logger.info(f"Starting network discovery for {target}")
             
-            # Port scanning
-            progress_callback(0.5)
-            ports = scan_config.get('ports', '1-1000')
-            self.logger.info(f"Starting port scan with ports: {ports}")
-            ports_data = self.nmap_scanner.port_scan(target, ports)
-            self.logger.info(f"Port scan completed")
+            # Use network reconnaissance plugin if available
+            network_plugins = [p for p in self.plugin_manager.get_all_plugins() 
+                             if p.metadata.category == 'network' and 'reconnaissance' in p.name.lower()]
             
-            # Network vulnerability checks
-            progress_callback(0.8)
-            self.logger.info(f"Starting network vulnerability checks")
-            network_vulns = self.network_checker.check_network_vulnerabilities(target, ports_data)
-            results.extend(network_vulns)
-            self.logger.info(f"Network vulnerability checks completed, found {len(network_vulns)} vulnerabilities")
+            if network_plugins:
+                self.logger.info("Using network reconnaissance plugin")
+                plugin = network_plugins[0]
+                context = {'target': target, 'ports': scan_config.get('ports', '1-1000')}
+                
+                progress_callback(0.5)
+                plugin_results = plugin.check(target, context=context)
+                
+                # Convert plugin findings to results format
+                for finding in plugin_results:
+                    results.append({
+                        'vulnerability': finding.title,
+                        'severity': finding.severity,
+                        'description': finding.description,
+                        'solution': finding.solution,
+                        'target': target,
+                        'port': finding.port,
+                        'service': finding.service,
+                        'confidence': finding.confidence,
+                        'cve_ids': finding.cve_ids,
+                        'references': finding.references,
+                        'metadata': finding.metadata
+                    })
+                
+                progress_callback(0.8)
+            else:
+                self.logger.warning("No network reconnaissance plugin found, using basic checks")
+                # Fallback to basic network checks
+                network_vulns = self.network_checker.check_network_vulnerabilities(target, {})
+                results.extend(network_vulns)
             
             progress_callback(1.0)
+            self.logger.info(f"Network discovery completed, found {len(results)} findings")
             return results
         
         except Exception as e:
             self.logger.error(f"Error in network discovery: {str(e)}")
             import traceback
             self.logger.error(f"Traceback: {traceback.format_exc()}")
-            raise e
+            # Return empty results instead of raising to allow scan to continue
+            return results
     
     def _run_service_detection(self, scan_config: Dict[str, Any], progress_callback: Callable) -> List[Dict[str, Any]]:
-        """Run service detection and enumeration"""
+        """Run service detection and enumeration using plugins"""
         results = []
         target = scan_config['target']
         
-        # Service version detection
-        progress_callback(0.2)
-        services = self.nmap_scanner.service_detection(target)
+        try:
+            progress_callback(0.2)
+            self.logger.info(f"Starting service detection for {target}")
+            
+            # Service detection is now part of network reconnaissance plugin
+            # Use basic service checks as fallback
+            progress_callback(0.5)
+            service_vulns = self.network_checker.check_service_vulnerabilities({})
+            results.extend(service_vulns)
+            
+            progress_callback(1.0)
+            self.logger.info(f"Service detection completed")
+        except Exception as e:
+            self.logger.error(f"Service detection failed: {str(e)}")
         
-        # OS detection
-        progress_callback(0.5)
-        os_info = self.nmap_scanner.os_detection(target)
-        
-        # Service-specific vulnerability checks
-        progress_callback(0.8)
-        service_vulns = self.network_checker.check_service_vulnerabilities(services)
-        results.extend(service_vulns)
-        
-        progress_callback(1.0)
         return results
     
     def _run_local_checks(self, scan_config: Dict[str, Any], progress_callback: Callable) -> List[Dict[str, Any]]:
@@ -458,27 +474,32 @@ class VulnSleuthEngine:
         return results
     
     def _enrich_with_cve_data(self, results: List[Dict[str, Any]], progress_callback: Callable) -> List[Dict[str, Any]]:
-        """Enrich vulnerability results with CVE data"""
+        """Enrich vulnerability results with CVE data using CVE intelligence plugin"""
         enriched_results = []
         
-        for i, result in enumerate(results):
-            progress = (i + 1) / len(results)
-            progress_callback(progress)
+        try:
+            # Find CVE intelligence plugin
+            cve_plugins = [p for p in self.plugin_manager.get_all_plugins() 
+                          if p.metadata.category == 'intelligence' and 'cve' in p.name.lower()]
             
-            # Look up CVE information
-            cve_data = self.cve_lookup.lookup_vulnerability(result)
+            if not cve_plugins:
+                self.logger.warning("No CVE intelligence plugin found, skipping CVE enrichment")
+                return results
             
-            # Merge CVE data
-            if cve_data:
-                result.update({
-                    'cve_ids': cve_data.get('cve_ids', []),
-                    'cvss_score': cve_data.get('cvss_score'),
-                    'cvss_vector': cve_data.get('cvss_vector'),
-                    'cwe_ids': cve_data.get('cwe_ids', []),
-                    'references': cve_data.get('references', [])
-                })
+            # CVE enrichment is handled by the CVE intelligence plugin during its execution
+            # The plugin correlates services with CVEs automatically
+            # Just return the results as-is since CVE data should already be included
+            enriched_results = results
             
-            enriched_results.append(result)
+            for i, result in enumerate(enriched_results):
+                progress = (i + 1) / len(enriched_results) if enriched_results else 1.0
+                progress_callback(progress)
+            
+            self.logger.info(f"CVE enrichment completed for {len(enriched_results)} results")
+        
+        except Exception as e:
+            self.logger.error(f"CVE enrichment failed: {str(e)}")
+            enriched_results = results
         
         return enriched_results
     

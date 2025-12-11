@@ -79,35 +79,174 @@ def require_auth(f):
     """Authentication decorator for routes"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Simple session-based auth (in production, use proper authentication)
-        if not session.get('authenticated'):
+        if not session.get('authenticated') or not session.get('user_id'):
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
 
+def check_first_time_setup():
+    """Check if this is the first time setup (no users exist)"""
+    if db_manager is None:
+        return True
+    return not db_manager.user_exists()
+
 # Authentication routes
+@app.route('/setup', methods=['GET', 'POST'])
+def setup():
+    """First-time setup - create initial admin user"""
+    if not check_first_time_setup():
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+        
+        # Validation
+        if not username or len(username) < 3:
+            flash('Username must be at least 3 characters long', 'error')
+            return render_template('setup.html')
+        
+        if not email or '@' not in email:
+            flash('Please enter a valid email address', 'error')
+            return render_template('setup.html')
+        
+        if not password or len(password) < 8:
+            flash('Password must be at least 8 characters long', 'error')
+            return render_template('setup.html')
+        
+        if password != confirm_password:
+            flash('Passwords do not match', 'error')
+            return render_template('setup.html')
+        
+        # Create first admin user
+        password_hash = generate_password_hash(password)
+        user_id = db_manager.create_user(username, email, password_hash, is_admin=True)
+        
+        if user_id:
+            logger.info(f"First admin user created: {username}")
+            flash('Account created successfully! Please login.', 'success')
+            return redirect(url_for('login'))
+        else:
+            flash('Failed to create account. Username or email may already exist.', 'error')
+    
+    return render_template('setup.html')
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     """User login"""
+    # Check if first-time setup is needed
+    if check_first_time_setup():
+        return redirect(url_for('setup'))
+    
     if request.method == 'POST':
-        username = request.form.get('username', '')
+        username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
         
-        # In production, implement proper user authentication
-        # For now, use simple hardcoded credentials
-        if username == 'admin' and password == 'vulnsleuth123':
-            session['authenticated'] = True
-            session['username'] = username
-            flash('Login successful', 'success')
-            return redirect(url_for('dashboard'))
+        if not username or not password:
+            flash('Please enter both username and password', 'error')
+            return render_template('login.html')
+        
+        # Get user from database
+        user = db_manager.get_user_by_username(username)
+        
+        if user and user['is_active']:
+            # Check if account is locked
+            if user['locked_until']:
+                locked_until = datetime.fromisoformat(user['locked_until'])
+                if datetime.now() < locked_until:
+                    remaining = int((locked_until - datetime.now()).total_seconds() / 60)
+                    flash(f'Account is locked. Please try again in {remaining} minutes.', 'error')
+                    return render_template('login.html')
+            
+            # Verify password
+            if check_password_hash(user['password_hash'], password):
+                # Successful login
+                session['authenticated'] = True
+                session['user_id'] = user['user_id']
+                session['username'] = user['username']
+                session['is_admin'] = user['is_admin']
+                session.permanent = True
+                
+                # Update login info
+                db_manager.update_user_login(user['user_id'], success=True)
+                
+                # Log activity
+                ip_address = request.remote_addr
+                db_manager.log_user_activity(user['user_id'], 'login', 'User logged in', ip_address)
+                
+                flash('Login successful', 'success')
+                return redirect(url_for('dashboard'))
+            else:
+                # Failed login
+                db_manager.update_user_login(user['user_id'], success=False)
+                flash('Invalid username or password', 'error')
         else:
-            flash('Invalid credentials', 'error')
+            flash('Invalid username or password', 'error')
     
-    return render_template('login.html')
+    return render_template('login.html', show_create_account=True)
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    """User registration"""
+    # Check if first-time setup is needed
+    if check_first_time_setup():
+        return redirect(url_for('setup'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+        
+        # Validation
+        if not username or len(username) < 3:
+            flash('Username must be at least 3 characters long', 'error')
+            return render_template('register.html')
+        
+        if not email or '@' not in email:
+            flash('Please enter a valid email address', 'error')
+            return render_template('register.html')
+        
+        if not password or len(password) < 8:
+            flash('Password must be at least 8 characters long', 'error')
+            return render_template('register.html')
+        
+        if password != confirm_password:
+            flash('Passwords do not match', 'error')
+            return render_template('register.html')
+        
+        # Check if username or email already exists
+        if db_manager.get_user_by_username(username):
+            flash('Username already exists', 'error')
+            return render_template('register.html')
+        
+        if db_manager.get_user_by_email(email):
+            flash('Email already registered', 'error')
+            return render_template('register.html')
+        
+        # Create user (non-admin by default)
+        password_hash = generate_password_hash(password)
+        user_id = db_manager.create_user(username, email, password_hash, is_admin=False)
+        
+        if user_id:
+            logger.info(f"New user registered: {username}")
+            flash('Account created successfully! Please login.', 'success')
+            return redirect(url_for('login'))
+        else:
+            flash('Failed to create account. Please try again.', 'error')
+    
+    return render_template('register.html')
 
 @app.route('/logout')
+@require_auth
 def logout():
     """User logout"""
+    if session.get('user_id'):
+        ip_address = request.remote_addr
+        db_manager.log_user_activity(session['user_id'], 'logout', 'User logged out', ip_address)
+    
     session.clear()
     flash('Logged out successfully', 'info')
     return redirect(url_for('login'))
