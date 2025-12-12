@@ -1,215 +1,361 @@
 # VulnSleuth - Advanced Vulnerability Scanner
 
-A comprehensive vulnerability scanner with both CLI and web dashboard interfaces for ethical security testing and automated vulnerability assessment.
+[![Python Version](https://img.shields.io/badge/python-3.8%2B-brightgreen)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-## 🚀 Features
+A comprehensive vulnerability assessment platform with multiple interfaces (TUI, Web Dashboard, CLI), extensible plugin system, and automated security testing capabilities.
 
-- **Dual Interface**: Command-line tool and Flask web dashboard
-- **Multi-layered Scanning**: Local system, network, and web application security checks
-- **CVE Integration**: Real-time CVE lookup with MITRE and NVD databases
-- **Plugin Architecture**: Extensible system with custom vulnerability checks
-- **Interactive Web Dashboard**: Real-time monitoring with Bootstrap 5 UI
-- **Comprehensive Reporting**: JSON, HTML, CSV, and XML report generation
-- **Database Integration**: SQLite backend for persistent scan data
-- **Auto-remediation**: Intelligent vulnerability fixing suggestions
-- **Docker Support**: Containerized deployment ready
-
-## 📋 Prerequisites
-
-- Python 3.8+
-- Nmap (for network scanning)
-- Modern web browser (for dashboard)
-- Windows/Linux/macOS support
-
-## 🔧 Installation
-
-### Quick Start
-
-```bash
-# Clone the repository
-git clone https://github.com/devdas36/vulnsleuth.git
-cd vulnsleuth
-
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Run CLI scan
-python src/main.py scan --target localhost --type basic
-
-# Launch web dashboard
-python src/main.py dashboard
-# Access at http://localhost:5000 (admin/vulnsleuth123)
-```
-
-### Docker Deployment
-
-```bash
-# Build and run with Docker
-docker-compose up -d
-```
-
-## 💻 Usage
-
-### Command Line Interface
-
-```bash
-# Basic system scan
-python src/main.py scan --target localhost --type local
-
-# Network scan with port range
-python src/main.py scan --target 192.168.1.0/24 --type network --ports 1-1000
-
-# Web application scan
-python src/main.py scan --target https://example.com --type webapp
-
-# Generate detailed report
-python src/main.py report --scan-id 1 --format html --output scan_report.html
-```
-
-### Web Dashboard
-
-Launch the web interface:
-
-```bash
-python src/main.py dashboard
-```
-
-Features available at `http://localhost:5000`:
-
-- **Dashboard**: Real-time scan status and statistics
-- **Scan Management**: Create, monitor, and manage vulnerability scans
-- **Vulnerability Viewer**: Detailed findings with remediation guidance
-- **Reports**: Generate and download comprehensive reports
-- **Target Management**: Organize and track scan targets
-- **Settings**: Configure scan parameters and preferences
-
-**Login Credentials**: `admin` / `vulnsleuth123`
-
-## ⚙️ Configuration
-
-The `vulnsluth.cfg` file allows customization of:
-
-- **Scan Settings**: Timeout values, thread counts, intensity levels
-- **Database**: SQLite configuration and CVE caching options
-- **Network Scanning**: Nmap integration and port ranges
-- **Web Scanning**: HTTP settings and security checks
-- **Reporting**: Output formats and templates
-- **Dashboard**: Web interface host, port, and security settings
-
-## 🔌 Plugin Development
-
-Create custom vulnerability checks by extending the plugin system:
-
-```python
-from src.plugin import VulnPlugin, VulnerabilityFinding
-
-class CustomPlugin(VulnPlugin):
-    def get_metadata(self):
-        return {
-            'name': 'Custom Security Check',
-            'version': '1.0',
-            'description': 'Custom vulnerability detection'
-        }
-    
-    def run_check(self, target):
-        # Your vulnerability detection logic
-        if self.detect_vulnerability(target):
-            return VulnerabilityFinding(
-                title="Custom Vulnerability",
-                severity="High",
-                description="Detected custom security issue"
-            )
-```
-
-## 🛡️ Project Structure
-
-```sh
-vulnsleuth/
-├── src/                         # Core application source code
-│   ├── __init__.py             # Package initialization
-│   ├── main.py                 # CLI entry point and command interface
-│   ├── webapp.py               # Flask web application and routes
-│   ├── engine.py               # Scan orchestration engine
-│   ├── db.py                   # SQLite database management
-│   ├── utils.py                # Common utility functions
-│   ├── reporter.py             # Report generation (HTML, JSON, CSV, XML)
-│   ├── plugin.py               # Plugin system architecture
-│   ├── cve_lookup.py           # CVE database integration
-│   ├── nmap_integration.py     # Network scanning with Nmap
-│   ├── auto_remediation.py     # Automated vulnerability fixing
-│   ├── checks/                 # Vulnerability detection modules
-│   │   ├── __init__.py         # Checks package initialization
-│   │   ├── local_checks.py     # Local system security checks
-│   │   ├── network_checks.py   # Network-based vulnerability checks
-│   │   └── webapp_checks.py    # Web application security testing
-│   └── templates/              # Flask web dashboard templates
-│       ├── base.html           # Base template with navigation
-│       ├── login.html          # Authentication page
-│       ├── dashboard.html      # Main dashboard overview
-│       ├── scans.html          # Scan management interface
-│       ├── new_scan.html       # Create new scan form
-│       ├── scan_status.html    # Real-time scan monitoring
-│       ├── vulnerabilities.html # Vulnerability findings display
-│       ├── reports.html        # Report generation interface
-│       ├── targets.html        # Target management
-│       ├── settings.html       # Configuration settings
-│       └── remediation.html    # Remediation guidance
-├── plugins/                    # Extensible plugin system
-│   ├── simple_port_scanner.py  # Basic network port scanner plugin
-│   └── example_web_plugin.py   # Web application testing plugin
-├── tests/                      # Unit and integration tests
-│   ├── __init__.py            # Test package initialization
-│   ├── conftest.py            # PyTest configuration and fixtures
-│   ├── run_tests.py           # Test runner script
-│   ├── test_database.py       # Database functionality tests
-│   ├── test_engine.py         # Scan engine tests
-│   ├── test_plugins.py        # Plugin system tests
-│   └── README.md              # Testing documentation
-├── vulnsluth.cfg              # Main configuration file
-├── requirements.txt           # Python package dependencies
-└── README.md                  # Project documentation (this file)
-```
-
-### 📁 Key Components
-
-- **CLI Interface** (`src/main.py`): Command-line tool for automated scanning
-- **Web Dashboard** (`src/webapp.py` + `templates/`): Interactive web interface
-- **Scan Engine** (`src/engine.py`): Core vulnerability detection orchestration
-- **Database Layer** (`src/db.py`): SQLite-based data persistence
-- **Plugin System** (`plugins/`): Extensible architecture for custom checks
-- **Vulnerability Checks** (`src/checks/`): Modular security testing components
-- **Reporting System** (`src/reporter.py`): Multi-format report generation
-
-## ⚖️ Ethical Usage
-
-**⚠️ IMPORTANT**: VulnSleuth is designed for **authorized security testing only**.
-
-- Always obtain explicit written permission before scanning systems
-- Use only on systems you own or have authorization to test
-- Respect rate limits and avoid disrupting production systems
-- Follow responsible disclosure practices for any vulnerabilities found
-
-## 📄 License
-
-MIT License - See LICENSE file for details.
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/new-feature`)
-3. Add tests for new functionality
-4. Commit changes (`git commit -am 'Add new feature'`)
-5. Push to branch (`git push origin feature/new-feature`)
-6. Create a Pull Request
-
-## 📞 Support & Contact
-
-- **Documentation**: Check the `/docs/` directory
-- **Issues**: Report bugs via [GitHub Issues](https://github.com/devdas36/vulnsleuth/issues)
-- **Security**: Responsible disclosure to [d3vdas36@gmail.com](mailto:d3vdas36@gmail.com)
-- **Author**: Devdas - [GitHub Profile](https://github.com/devdas36)
-- **Repository**: [VulnSleuth on GitHub](https://github.com/devdas36/vulnsleuth)
+**Author**: Devdas | **Email**: <d3vdas36@gmail.com> | **GitHub**: [@devdas36](https://github.com/devdas36)
 
 ---
 
+## 📖 Table of Contents
+
+- [About](#about)
+- [Features](#features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Plugins](#plugins)
+- [Project Structure](#project-structure)
+- [Security](#security)
+- [License](#license)
+
+---
+
+## About
+
+VulnSleuth is a professional security scanning framework for ethical hackers, security professionals, and system administrators. It provides comprehensive vulnerability assessment across local systems, networks, and web applications.
+
+**Purpose**: Security audits, penetration testing, DevSecOps integration, network monitoring, and educational use.
+
+---
+
+## Features
+
+- **🖥️ Multiple Interfaces**: Interactive TUI, Web Dashboard, CLI for automation
+- **🔍 Multi-Layer Scanning**: Local system, network, and web application security checks
+- **🧩 Plugin System**: Extensible architecture with 7+ built-in plugins
+- **🎯 CVE Intelligence**: Real-time CVE lookup, exploit correlation, NVD/MITRE integration
+- **📊 Advanced Reporting**: JSON, HTML, CSV, XML, PDF with custom templates
+- **💾 Database Management**: SQLite backend with history tracking and analytics
+- **🤖 Automation**: Scheduled scans, auto-remediation suggestions, alerts (Email/Slack/Discord)
+- **🔐 Security**: User authentication, encryption, audit logging, rate limiting
+
+---
+
+## Installation
+
+### Prerequisites
+
+- Python 3.8+
+- Nmap (for network scanning)
+- Git
+
+### Quick Install
+
+```bash
+# Clone repository
+git clone https://github.com/devdas36/vulnsleuth.git
+cd vulnsleuth
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Verify installation
+nmap --version
+python src/main.py --help
+```
+
+### Optional: Virtual Environment
+
+```bash
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### Optional: Docker
+
+```bash
+docker build -t vulnsleuth .
+docker run -p 5000:5000 -v $(pwd)/data:/app/data vulnsleuth
+```
+
+---
+
+## Quick Start
+
+### 1. Interactive TUI
+
+```bash
+python src/main.py
+```
+
+Menu-driven interface with ASCII banner, real-time progress, and interactive navigation.
+
+### 2. Web Dashboard
+
+```bash
+python src/app.py
+# Access at http://localhost:5000
+```
+
+Features: Real-time monitoring, scan management, vulnerability browser, report generation.
+
+---
+
+## Configuration
+
+Edit `vulnsluth.cfg` to customize VulnSleuth behavior.
+
+### Key Configuration Sections
+
+#### General Settings
+
+```ini
+[general]
+max_threads = 50              # Concurrent threads
+scan_intensity = medium       # low, medium, high, aggressive
+default_timeout = 300         # Scan timeout (seconds)
+verbose_logging = true
+```
+
+#### Database
+
+```ini
+[database]
+db_path = data/vulnsleuth.db
+cve_cache_days = 7
+auto_backup = true
+```
+
+#### CVE Intelligence
+
+```ini
+[cve_sources]
+nvd_api_key = your_key_here   # Get from nvd.nist.gov
+mitre_enabled = true
+exploit_db_enabled = true
+```
+
+#### Network Scanning
+
+```ini
+[network_scanning]
+nmap_path = nmap
+nmap_timing = -T4             # -T0 to -T5
+default_ports = 1-1000,3000,3389,5432,8080,8443
+os_detection = true
+service_detection = true
+```
+
+#### Dashboard
+
+```ini
+[dashboard]
+host = 127.0.0.1              # Use 0.0.0.0 for external access
+port = 5000
+```
+
+#### Notifications
+
+```ini
+[notifications]
+email_enabled = false
+smtp_server = smtp.gmail.com
+slack_webhook = your_webhook_url
+notify_on_critical = true
+```
+
+**Important**: Change default credentials in production!
+
+---
+
+## Plugins
+
+### Built-in Plugins
+
+VulnSleuth includes 7 professional security plugins:
+
+1. **Web Security Scanner**: HTTP headers, SSL/TLS, cookies, XSS/SQLi indicators
+2. **Network Reconnaissance**: Port scanning, service detection, OS fingerprinting (Nmap)
+3. **CVE Intelligence**: Real-time CVE lookup, exploit correlation, NVD/MITRE integration
+4. **SSL/TLS Audit**: Certificate validation, cipher analysis, protocol versions
+5. **Database Security**: Database service detection, default credentials, misconfigurations
+6. **Authentication Bypass**: Default credentials, weak passwords, session issues
+7. **Information Disclosure**: Server banners, directory listing, backup files
+
+### Creating Custom Plugins
+
+Example plugin:
+
+```python
+# plugins/my_custom_plugin.py
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'src'))
+
+from plugin import VulnPlugin, VulnerabilityFinding, PluginMetadata
+
+class CustomPlugin(VulnPlugin):
+    def __init__(self, config=None):
+        super().__init__(config)
+        self.metadata = PluginMetadata(
+            name="Custom Plugin",
+            version="1.0.0",
+            author="Your Name",
+            description="Custom vulnerability checks",
+            category="custom",
+            tags=["custom", "security"]
+        )
+    
+    def check(self, target, **kwargs):
+        findings = []
+        # Your detection logic here
+        if self._detect_vulnerability(target):
+            finding = self.create_finding(
+                title="Vulnerability Found",
+                severity="high",
+                description="Details...",
+                target=target,
+                solution="Fix recommendation"
+            )
+            findings.append(finding)
+        return findings
+    
+    def _detect_vulnerability(self, target):
+        # Your custom logic
+        return False
+
+__plugin_class__ = CustomPlugin
+```
+
+Place in `plugins/` directory. Auto-loaded on startup if `auto_load = true` in config.
+
+---
+
+## Project Structure
+
+```bash
+vulnsleuth/
+├── LICENSE
+├── README.md
+├── requirements.txt          # Python dependencies
+├── vulnsluth.cfg            # Configuration file
+├── src/                     # Core application
+│   ├── main.py             # TUI entry point
+│   ├── app.py              # Web dashboard (Flask)
+│   ├── engine.py           # Scan orchestration
+│   ├── db.py               # Database manager
+│   ├── reporter.py         # Report generation
+│   ├── plugin.py           # Plugin system
+│   ├── tui.py              # Terminal UI
+│   ├── utils.py            # Utilities
+│   ├── auto_remediation.py # Auto-fix suggestions
+│   ├── checks/             # Security checks
+│   │   ├── local_checks.py
+│   │   ├── network_checks.py
+│   │   └── webapp_checks.py
+│   ├── templates/          # Web UI templates
+│   └── static/             # CSS/JS assets
+├── plugins/                # Security plugins
+│   ├── web_security_scanner_plugin.py
+│   ├── network_reconnaissance_plugin.py
+│   ├── cve_intelligence_plugin.py
+│   ├── ssl_tls_audit_plugin.py
+│   ├── database_security_plugin.py
+│   ├── authentication_bypass_plugin.py
+│   └── information_disclosure_plugin.py
+├── data/                   # Databases (created at runtime)
+├── logs/                   # Log files
+├── reports/                # Generated reports
+├── backups/                # Database backups
+└── temp/                   # Temporary files
+```
+
+---
+
+## Security
+
+### ⚠️ Ethical Use Warning
+
+**VulnSleuth is for authorized security testing ONLY.**
+
+✅ **DO**: Obtain written permission, scan owned systems, follow responsible disclosure  
+❌ **DON'T**: Scan without authorization, use for illegal purposes, disrupt production
+
+**Unauthorized access to computer systems is illegal.** Users are solely responsible for their actions.
+
+### Production Security Checklist
+
+- [ ] Change default credentials in `vulnsluth.cfg`
+- [ ] Configure IP whitelist
+- [ ] Enable database encryption
+- [ ] Use HTTPS with reverse proxy
+- [ ] Set API rate limits
+- [ ] Regular security updates
+- [ ] Secure file permissions on data directory
+
+---
+
+## Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| **Nmap not found** | Install: `apt install nmap` (Linux), `brew install nmap` (Mac), or download from nmap.org (Windows) |
+| **Permission denied** | Run with `sudo` or fix directory permissions: `chmod 755 data/ logs/` |
+| **Module not found** | Reinstall dependencies: `pip install -r requirements.txt` |
+| **Database locked** | Stop all instances: `pkill -f vulnsleuth` |
+| **Port 5000 in use** | Change port in config or: `python src/app.py --port 8080` |
+| **SSL errors** | Set `verify_ssl = false` in `[web_scanning]` (testing only!) |
+
+Enable debug logging:
+
+```ini
+[general]
+verbose_logging = true
+```
+
+View logs: `tail -f logs/vulnsleuth.log`
+
+---
+
+## Contributing
+
+Contributions welcome!
+
+1. Fork repo
+2. Create feature branch: `git checkout -b feature/new-feature`
+3. Make changes, add tests
+4. Commit: `git commit -am 'Add feature'`
+5. Push: `git push origin feature/new-feature`
+6. Create Pull Request
+
+**Guidelines**: Follow PEP 8, add tests (>80% coverage), update docs, no hardcoded secrets.
+
+---
+
+## License
+
+MIT License - Copyright (c) 2024 Devdas
+
+See [LICENSE](LICENSE) file for details.
+
+---
+
+## Contact
+
+**Devdas** | <d3vdas36@gmail.com> | [@devdas36](https://github.com/devdas36)
+
+- **Bugs/Features**: [GitHub Issues](https://github.com/devdas36/vulnsleuth/issues)
+- **Security**: <d3vdas36@gmail.com> (responsible disclosure)
+
+---
+
+<div align="center">
+
+⭐ **Star this repo if you find it useful!**
+
 Made with ❤️ for the cybersecurity community
+
+</div>
