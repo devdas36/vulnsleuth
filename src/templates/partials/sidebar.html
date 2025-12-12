@@ -1,0 +1,44 @@
+<aside class="sidebar">
+    <div class="sidebar-menu">
+        <a href="/dashboard" class="menu-item {{ 'active' if request.path == '/dashboard' else '' }}">
+            <i class="fas fa-tachometer-alt"></i>
+            <span>Dashboard</span>
+        </a>
+        
+        <a href="/scan" class="menu-item {{ 'active' if request.path == '/scan' else '' }}">
+            <i class="fas fa-crosshairs"></i>
+            <span>New Scan</span>
+        </a>
+        
+        <a href="/reports" class="menu-item {{ 'active' if request.path == '/reports' else '' }}">
+            <i class="fas fa-file-alt"></i>
+            <span>Reports</span>
+        </a>
+        
+        <a href="/plugins" class="menu-item {{ 'active' if request.path == '/plugins' else '' }}">
+            <i class="fas fa-plug"></i>
+            <span>Plugins</span>
+        </a>
+        
+        <a href="/vulnerabilities" class="menu-item {{ 'active' if request.path == '/vulnerabilities' else '' }}">
+            <i class="fas fa-shield-virus"></i>
+            <span>Vulnerability Guide</span>
+        </a>
+        
+        <div class="menu-divider"></div>
+        
+        <a href="/settings" class="menu-item {{ 'active' if request.path == '/settings' else '' }}">
+            <i class="fas fa-cog"></i>
+            <span>Settings</span>
+        </a>
+    </div>
+    
+    <div class="sidebar-footer">
+        <div class="system-status">
+            <div class="status-item">
+                <i class="fas fa-circle status-online"></i>
+                <span>System Online</span>
+            </div>
+        </div>
+    </div>
+</aside>

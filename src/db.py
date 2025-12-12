@@ -400,17 +400,35 @@ class DatabaseManager:
             finally:
                 conn.close()
     
-    def save_scan_result(self, scan_result: ScanResult) -> bool:
+    def save_scan_result(self, scan_result: Union[ScanResult, Dict[str, Any]]) -> bool:
         """
         Save scan result to database
         
         Args:
-            scan_result: ScanResult object to save
+            scan_result: ScanResult object or dict to save
             
         Returns:
             True if successful, False otherwise
         """
         try:
+            # Handle both ScanResult objects and dictionaries
+            if isinstance(scan_result, dict):
+                scan_id = scan_result['scan_id']
+                target = scan_result['target']
+                scan_type = scan_result['scan_type']
+                timestamp = scan_result['timestamp']
+                status = scan_result['status']
+                vulnerabilities = scan_result['vulnerabilities']
+                metadata = scan_result.get('metadata', {})
+            else:
+                scan_id = scan_result.scan_id
+                target = scan_result.target
+                scan_type = scan_result.scan_type
+                timestamp = scan_result.timestamp
+                status = scan_result.status
+                vulnerabilities = scan_result.vulnerabilities
+                metadata = scan_result.metadata
+            
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 
@@ -420,22 +438,22 @@ class DatabaseManager:
                     (scan_id, target, scan_type, timestamp, status, metadata, updated_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                 ''', (
-                    scan_result.scan_id,
-                    scan_result.target,
-                    scan_result.scan_type,
-                    scan_result.timestamp,
-                    scan_result.status,
-                    json.dumps(scan_result.metadata),
+                    scan_id,
+                    target,
+                    scan_type,
+                    timestamp,
+                    status,
+                    json.dumps(metadata) if isinstance(metadata, dict) else metadata,
                     datetime.now().isoformat()
                 ))
                 
                 # Save vulnerabilities
-                for vuln in scan_result.vulnerabilities:
-                    self._save_vulnerability(cursor, scan_result.scan_id, scan_result.target, vuln)
+                for vuln in vulnerabilities:
+                    self._save_vulnerability(cursor, scan_id, target, vuln)
                 
                 conn.commit()
                 
-                self.logger.debug(f"Saved scan result: {scan_result.scan_id}")
+                self.logger.debug(f"Saved scan result: {scan_id}")
                 return True
                 
         except Exception as e:
@@ -529,8 +547,12 @@ class DatabaseManager:
                     query += ' AND scan_type = ?'
                     params.append(scan_type)
                 
-                query += ' ORDER BY timestamp DESC LIMIT ?'
-                params.append(limit)
+                # Add LIMIT only if specified
+                if limit:
+                    query += ' ORDER BY timestamp DESC LIMIT ?'
+                    params.append(limit)
+                else:
+                    query += ' ORDER BY timestamp DESC'
                 
                 cursor.execute(query, params)
                 rows = cursor.fetchall()
@@ -1210,6 +1232,76 @@ class DatabaseManager:
                 
         except Exception as e:
             self.logger.error(f"Failed to log user activity: {str(e)}")
+    
+    # ==================== Web Interface Helper Methods ====================
+    
+    def get_all_scans(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Get all scans for web interface"""
+        scan_results = self.get_scan_results(limit=limit)
+        # Convert ScanResult objects to dictionaries
+        return [scan.to_dict() if hasattr(scan, 'to_dict') else scan for scan in scan_results]
+    
+    def get_scan_by_id(self, scan_id: str) -> Optional[Dict[str, Any]]:
+        """Get a specific scan by ID with vulnerabilities"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT * FROM scans WHERE scan_id = ?
+                ''', (scan_id,))
+                
+                row = cursor.fetchone()
+                if not row:
+                    return None
+                
+                scan = dict(row)
+                
+                # Get vulnerabilities for this scan
+                cursor.execute('''
+                    SELECT * FROM vulnerabilities WHERE scan_id = ?
+                ''', (scan_id,))
+                
+                vulns = []
+                for vuln_row in cursor.fetchall():
+                    vuln_dict = dict(vuln_row)
+                    # Parse JSON fields
+                    if vuln_dict.get('cve_ids'):
+                        vuln_dict['cve_ids'] = json.loads(vuln_dict['cve_ids'])
+                    if vuln_dict.get('reference_urls'):
+                        vuln_dict['reference_urls'] = json.loads(vuln_dict['reference_urls'])
+                    vulns.append(vuln_dict)
+                
+                scan['vulnerabilities'] = vulns
+                
+                # Parse metadata if present
+                if scan.get('metadata'):
+                    scan['metadata'] = json.loads(scan['metadata'])
+                
+                return scan
+                
+        except Exception as e:
+            self.logger.error(f"Error getting scan by ID: {str(e)}")
+            return None
+    
+    def delete_scan(self, scan_id: str) -> bool:
+        """Delete a scan and its vulnerabilities"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Delete vulnerabilities first
+                cursor.execute('DELETE FROM vulnerabilities WHERE scan_id = ?', (scan_id,))
+                
+                # Delete scan
+                cursor.execute('DELETE FROM scans WHERE scan_id = ?', (scan_id,))
+                
+                conn.commit()
+                self.logger.info(f"Deleted scan: {scan_id}")
+                return True
+                
+        except Exception as e:
+            self.logger.error(f"Error deleting scan: {str(e)}")
+            return False
 
 if __name__ == "__main__":
     # Test database operations

@@ -1,266 +1,261 @@
-{% extends "base.html" %}
-
-{% block title %}Dashboard - VulnSleuth{% endblock %}
-
-{% block content %}
-<div class="container-fluid">
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h2 mb-0">
-            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
-        </h1>
-        <div class="text-muted">
-            <i class="fas fa-clock me-1"></i>Last updated: {{ current_time or 'N/A' }}
-        </div>
-    </div>
-
-    {% if data %}
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card text-white bg-primary">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="card-title mb-0">{{ data.total_scans or 0 }}</h4>
-                            <p class="card-text">Total Scans</p>
-                        </div>
-                        <div class="text-primary-50">
-                            <i class="fas fa-search fa-2x"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - VulnSleuth</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body data-theme="{{ theme }}">
+    {% include 'partials/navbar.html' %}
+    
+    <div class="container">
+        {% include 'partials/sidebar.html' %}
         
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card text-white bg-danger">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="card-title mb-0">{{ data.total_vulnerabilities or 0 }}</h4>
-                            <p class="card-text">Vulnerabilities</p>
-                        </div>
-                        <div class="text-danger-50">
-                            <i class="fas fa-bug fa-2x"></i>
-                        </div>
+        <main class="main-content">
+            <div class="page-header">
+                <div>
+                    <h1><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
+                    <p>Welcome back, {{ username }}!</p>
+                </div>
+                <button class="btn btn-primary" onclick="window.location.href='/scan'">
+                    <i class="fas fa-plus"></i> New Scan
+                </button>
+            </div>
+            
+            <!-- Statistics Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                    <div class="stat-details">
+                        <h3>Total Scans</h3>
+                        <p class="stat-value">{{ stats.total_scans }}</p>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon active">
+                        <i class="fas fa-sync"></i>
+                    </div>
+                    <div class="stat-details">
+                        <h3>Active Scans</h3>
+                        <p class="stat-value">{{ stats.active_scans }}</p>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon warning">
+                        <i class="fas fa-bug"></i>
+                    </div>
+                    <div class="stat-details">
+                        <h3>Vulnerabilities</h3>
+                        <p class="stat-value">{{ stats.total_vulnerabilities }}</p>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon info">
+                        <i class="fas fa-plug"></i>
+                    </div>
+                    <div class="stat-details">
+                        <h3>Active Plugins</h3>
+                        <p class="stat-value">{{ plugin_count }}</p>
                     </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card text-white bg-warning">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="card-title mb-0">{{ data.total_targets or 0 }}</h4>
-                            <p class="card-text">Targets</p>
-                        </div>
-                        <div class="text-warning-50">
-                            <i class="fas fa-bullseye fa-2x"></i>
-                        </div>
-                    </div>
+            
+            <!-- Charts Row -->
+            <div class="charts-row">
+                <div class="chart-card">
+                    <h3><i class="fas fa-chart-pie"></i> Vulnerabilities by Severity</h3>
+                    <canvas id="severityChart"></canvas>
+                </div>
+                
+                <div class="chart-card">
+                    <h3><i class="fas fa-chart-bar"></i> Vulnerability Distribution</h3>
+                    <canvas id="distributionChart"></canvas>
                 </div>
             </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card text-white bg-success">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="card-title mb-0">{{ data.active_scans or 0 }}</h4>
-                            <p class="card-text">Active Scans</p>
-                        </div>
-                        <div class="text-success-50">
-                            <i class="fas fa-play-circle fa-2x"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <!-- Vulnerability Severity Chart -->
-        <div class="col-lg-6 mb-4">
+            
+            <!-- Recent Scans -->
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-chart-pie me-2"></i>Vulnerability Distribution
-                    </h5>
+                    <h3><i class="fas fa-history"></i> Recent Scans</h3>
+                    <a href="/reports" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-list"></i> View All
+                    </a>
                 </div>
-                <div class="card-body">
-                    <canvas id="severityChart" width="400" height="300"></canvas>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Recent Scans -->
-        <div class="col-lg-6 mb-4">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-history me-2"></i>Recent Scans
-                    </h5>
-                    <a href="{{ url_for('scans') }}" class="btn btn-sm btn-outline-primary">View All</a>
-                </div>
-                <div class="card-body">
-                    {% if data.recent_scans %}
-                        <div class="list-group list-group-flush">
-                            {% for scan in data.recent_scans[:5] %}
-                            <div class="list-group-item border-0 px-0">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <h6 class="mb-1">{{ scan.target }}</h6>
-                                        <small class="text-muted">
-                                            <i class="fas fa-clock me-1"></i>{{ scan.timestamp }}
-                                        </small>
-                                    </div>
-                                    <div class="text-end">
-                                        <span class="scan-status status-{{ scan.status }}">
-                                            {{ scan.status.title() }}
-                                        </span>
-                                        {% if scan.vulnerability_count %}
-                                        <br><small class="text-muted">{{ scan.vulnerability_count }} vulns</small>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        <div class="text-center text-muted py-4">
-                            <i class="fas fa-search fa-3x mb-3 opacity-25"></i>
-                            <p>No recent scans found</p>
-                            <a href="{{ url_for('new_scan') }}" class="btn btn-primary">
-                                <i class="fas fa-plus me-2"></i>Start Your First Scan
-                            </a>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Critical Vulnerabilities -->
-    {% if data.critical_vulnerabilities %}
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-exclamation-triangle me-2"></i>Critical Vulnerabilities Requiring Immediate Attention
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Target</th>
+                                <th>Type</th>
+                                <th>Vulnerabilities</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentScansTable">
+                            {% if recent_scans %}
+                                {% for scan in recent_scans %}
                                 <tr>
-                                    <th>Vulnerability</th>
-                                    <th>Target</th>
-                                    <th>Severity</th>
-                                    <th>CVSS Score</th>
-                                    <th>First Detected</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for vuln in data.critical_vulnerabilities[:10] %}
-                                <tr>
+                                    <td><strong>{{ scan.target }}</strong></td>
+                                    <td>{{ scan.scan_type }}</td>
                                     <td>
-                                        <strong>{{ vuln.title }}</strong>
-                                        <br><small class="text-muted">{{ vuln.description[:100] }}...</small>
-                                    </td>
-                                    <td>{{ vuln.target }}</td>
-                                    <td>
-                                        <span class="vulnerability-badge critical">
-                                            {{ vuln.severity.upper() }}
+                                        <span class="badge badge-warning">
+                                            {{ scan.vulnerabilities|length if scan.vulnerabilities else 0 }}
                                         </span>
                                     </td>
-                                    <td>{{ vuln.cvss_score or 'N/A' }}</td>
-                                    <td>{{ vuln.first_detected }}</td>
+                                    <td>{{ scan.timestamp }}</td>
                                     <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <button class="btn btn-outline-primary" data-bs-toggle="tooltip" title="View Details">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            <button class="btn btn-outline-success" data-bs-toggle="tooltip" title="Remediate">
-                                                <i class="fas fa-tools"></i>
-                                            </button>
-                                        </div>
+                                        <span class="badge badge-{{ 'success' if scan.status == 'completed' else 'info' }}">
+                                            {{ scan.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-icon" onclick="viewScanDetails('{{ scan.scan_id }}')">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
                                     </td>
                                 </tr>
                                 {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center">No scans found. <a href="/scan">Start your first scan</a></td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
-        </div>
+            
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <div class="action-card" onclick="window.location.href='/scan'">
+                    <i class="fas fa-play-circle"></i>
+                    <h4>Start Scan</h4>
+                    <p>Launch a new security scan</p>
+                </div>
+                <div class="action-card" onclick="window.location.href='/reports'">
+                    <i class="fas fa-file-alt"></i>
+                    <h4>View Reports</h4>
+                    <p>Browse scan results</p>
+                </div>
+                <div class="action-card" onclick="window.location.href='/plugins'">
+                    <i class="fas fa-puzzle-piece"></i>
+                    <h4>Manage Plugins</h4>
+                    <p>Configure security checks</p>
+                </div>
+                <div class="action-card" onclick="window.location.href='/settings'">
+                    <i class="fas fa-cog"></i>
+                    <h4>Settings</h4>
+                    <p>Customize your experience</p>
+                </div>
+            </div>
+        </main>
     </div>
-    {% endif %}
-
-    {% else %}
-    <!-- Empty State -->
-    <div class="text-center py-5">
-        <i class="fas fa-tachometer-alt fa-4x text-muted mb-4"></i>
-        <h3 class="text-muted">Welcome to VulnSleuth</h3>
-        <p class="text-muted mb-4">Start by running your first vulnerability scan</p>
-        <a href="{{ url_for('new_scan') }}" class="btn btn-primary btn-lg">
-            <i class="fas fa-plus me-2"></i>Create New Scan
-        </a>
-    </div>
-    {% endif %}
-</div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-// Vulnerability Severity Chart
-{% if data and data.vulnerability_stats %}
-const ctx = document.getElementById('severityChart').getContext('2d');
-const severityChart = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-        labels: ['Critical', 'High', 'Medium', 'Low', 'Info'],
-        datasets: [{
-            data: [
-                {{ data.vulnerability_stats.critical or 0 }},
-                {{ data.vulnerability_stats.high or 0 }},
-                {{ data.vulnerability_stats.medium or 0 }},
-                {{ data.vulnerability_stats.low or 0 }},
-                {{ data.vulnerability_stats.info or 0 }}
-            ],
-            backgroundColor: [
-                'var(--vuln-critical)',
-                'var(--vuln-high)', 
-                'var(--vuln-medium)',
-                'var(--vuln-low)',
-                'var(--vuln-info)'
-            ],
-            borderWidth: 2,
-            borderColor: '#fff'
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                position: 'bottom'
-            }
+    
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // Initialize severity chart
+        const severityCtx = document.getElementById('severityChart');
+        if (severityCtx) {
+            new Chart(severityCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Critical', 'High', 'Medium', 'Low', 'Info'],
+                    datasets: [{
+                        data: [
+                            {{ stats.critical }},
+                            {{ stats.high }},
+                            {{ stats.medium }},
+                            {{ stats.low }},
+                            {{ stats.info }}
+                        ],
+                        backgroundColor: [
+                            '#dc3545',
+                            '#fd7e14',
+                            '#ffc107',
+                            '#28a745',
+                            '#17a2b8'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
         }
-    }
-});
-{% endif %}
-
-// Initialize tooltips
-var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-    return new bootstrap.Tooltip(tooltipTriggerEl);
-});
-</script>
-{% endblock %}
+        
+        // Initialize distribution chart
+        const distributionCtx = document.getElementById('distributionChart');
+        if (distributionCtx) {
+            new Chart(distributionCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Critical', 'High', 'Medium', 'Low', 'Info'],
+                    datasets: [{
+                        label: 'Vulnerabilities',
+                        data: [
+                            {{ stats.critical }},
+                            {{ stats.high }},
+                            {{ stats.medium }},
+                            {{ stats.low }},
+                            {{ stats.info }}
+                        ],
+                        backgroundColor: [
+                            '#dc3545',
+                            '#fd7e14',
+                            '#ffc107',
+                            '#28a745',
+                            '#17a2b8'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+        
+        function viewScanDetails(scanId) {
+            window.location.href = `/reports?scan_id=${scanId}`;
+        }
+        
+        // Auto-refresh stats every 30 seconds
+        setInterval(async () => {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+                // Update stat cards
+                document.querySelectorAll('.stat-value').forEach((el, idx) => {
+                    if (idx === 1) el.textContent = data.active_scans;
+                });
+            } catch (error) {
+                console.error('Failed to refresh stats:', error);
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

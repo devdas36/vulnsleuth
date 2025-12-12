@@ -1,377 +1,444 @@
-{% extends "base.html" %}
-
-{% block title %}Vulnerabilities - VulnSleuth{% endblock %}
-
-{% block content %}
-<div class="container-fluid">
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h2 mb-0">
-            <i class="fas fa-bug me-2"></i>Vulnerabilities
-        </h1>
-        <div>
-            <button class="btn btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#filterModal">
-                <i class="fas fa-filter me-2"></i>Filters
-            </button>
-            <button class="btn btn-primary" id="exportBtn">
-                <i class="fas fa-download me-2"></i>Export
-            </button>
-        </div>
-    </div>
-
-    <!-- Statistics Cards -->
-    {% if stats %}
-    <div class="row mb-4">
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card text-white bg-danger">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="card-title mb-0">{{ stats.critical or 0 }}</h4>
-                            <p class="card-text">Critical</p>
-                        </div>
-                        <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card text-white" style="background-color: var(--vuln-high);">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="card-title mb-0">{{ stats.high or 0 }}</h4>
-                            <p class="card-text">High</p>
-                        </div>
-                        <i class="fas fa-exclamation-circle fa-2x opacity-75"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card text-dark" style="background-color: var(--vuln-medium);">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="card-title mb-0">{{ stats.medium or 0 }}</h4>
-                            <p class="card-text">Medium</p>
-                        </div>
-                        <i class="fas fa-exclamation fa-2x opacity-75"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card text-white bg-success">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="card-title mb-0">{{ (stats.low or 0) + (stats.info or 0) }}</h4>
-                            <p class="card-text">Low & Info</p>
-                        </div>
-                        <i class="fas fa-info-circle fa-2x opacity-75"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if vulnerabilities %}
-    <div class="card">
-        <div class="card-header">
-            <div class="row align-items-center">
-                <div class="col">
-                    <h5 class="card-title mb-0">Vulnerability List ({{ vulnerabilities|length }} items)</h5>
-                </div>
-                <div class="col-auto">
-                    <div class="input-group input-group-sm">
-                        <input type="text" class="form-control" id="searchInput" 
-                               placeholder="Search vulnerabilities...">
-                        <button class="btn btn-outline-secondary" type="button">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0" id="vulnTable">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Severity</th>
-                            <th>Vulnerability</th>
-                            <th>Target</th>
-                            <th>Port/Service</th>
-                            <th>CVSS</th>
-                            <th>First Seen</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for vuln in vulnerabilities %}
-                        <tr data-severity="{{ vuln.severity }}" data-target="{{ vuln.target }}">
-                            <td>
-                                <span class="vulnerability-badge {{ vuln.severity }}">
-                                    {{ vuln.severity.upper() }}
-                                </span>
-                            </td>
-                            <td>
-                                <strong>{{ vuln.title or vuln.name or 'Unknown Vulnerability' }}</strong>
-                                {% if vuln.description %}
-                                <br><small class="text-muted">{{ vuln.description[:100] }}{% if vuln.description|length > 100 %}...{% endif %}</small>
-                                {% endif %}
-                                {% if vuln.cve_id %}
-                                <br><small><a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name={{ vuln.cve_id }}" 
-                                            target="_blank" class="text-decoration-none">{{ vuln.cve_id }}</a></small>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <strong>{{ vuln.target or vuln.host or 'N/A' }}</strong>
-                                {% if vuln.hostname and vuln.hostname != vuln.target %}
-                                <br><small class="text-muted">{{ vuln.hostname }}</small>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if vuln.port %}
-                                    {{ vuln.port }}
-                                    {% if vuln.service %}
-                                        <br><small class="text-muted">{{ vuln.service }}</small>
-                                    {% endif %}
-                                {% else %}
-                                    <span class="text-muted">N/A</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if vuln.cvss_score %}
-                                    <span class="badge bg-secondary">{{ vuln.cvss_score }}</span>
-                                {% else %}
-                                    <span class="text-muted">N/A</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <small>{{ vuln.first_detected or vuln.timestamp or 'Unknown' }}</small>
-                            </td>
-                            <td>
-                                {% set status = vuln.status or 'open' %}
-                                <span class="badge bg-{% if status == 'fixed' %}success{% elif status == 'in_progress' %}warning{% else %}danger{% endif %}">
-                                    {{ status.replace('_', ' ').title() }}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-primary view-details" 
-                                            data-vuln='{{ vuln|tojson }}'
-                                            data-bs-toggle="tooltip" title="View Details">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    {% if vuln.severity in ['critical', 'high'] %}
-                                    <button class="btn btn-outline-success remediate-vuln" 
-                                            data-vuln-id="{{ loop.index }}"
-                                            data-bs-toggle="tooltip" title="Remediate">
-                                        <i class="fas fa-tools"></i>
-                                    </button>
-                                    {% endif %}
-                                    <button class="btn btn-outline-info mark-status" 
-                                            data-vuln-id="{{ loop.index }}"
-                                            data-bs-toggle="tooltip" title="Change Status">
-                                        <i class="fas fa-flag"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    {% else %}
-    <!-- Empty State -->
-    <div class="text-center py-5">
-        <i class="fas fa-shield-alt fa-4x text-success mb-4"></i>
-        <h3 class="text-muted">No Vulnerabilities Found</h3>
-        <p class="text-muted mb-4">Great news! No vulnerabilities have been detected in your scans.</p>
-        <a href="{{ url_for('new_scan') }}" class="btn btn-primary">
-            <i class="fas fa-search me-2"></i>Run a New Scan
-        </a>
-    </div>
-    {% endif %}
-</div>
-
-<!-- Vulnerability Details Modal -->
-<div class="modal fade" id="vulnDetailsModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Vulnerability Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div id="vulnDetailsContent">
-                    <!-- Content loaded dynamically -->
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary">Generate Report</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Filter Modal -->
-<div class="modal fade" id="filterModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Filter Vulnerabilities</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="filterForm">
-                    <div class="mb-3">
-                        <label class="form-label">Severity</label>
-                        <div class="form-check">
-                            <input class="form-check-input severity-filter" type="checkbox" value="critical" checked>
-                            <label class="form-check-label">Critical</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input severity-filter" type="checkbox" value="high" checked>
-                            <label class="form-check-label">High</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input severity-filter" type="checkbox" value="medium" checked>
-                            <label class="form-check-label">Medium</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input severity-filter" type="checkbox" value="low">
-                            <label class="form-check-label">Low</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input severity-filter" type="checkbox" value="info">
-                            <label class="form-check-label">Info</label>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="targetFilter" class="form-label">Target</label>
-                        <input type="text" class="form-control" id="targetFilter" 
-                               placeholder="Filter by target...">
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" id="clearFilters">Clear</button>
-                <button type="button" class="btn btn-primary" id="applyFilters">Apply Filters</button>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-$(document).ready(function() {
-    // Search functionality
-    $('#searchInput').on('input', function() {
-        var searchTerm = $(this).val().toLowerCase();
-        $('#vulnTable tbody tr').each(function() {
-            var rowText = $(this).text().toLowerCase();
-            $(this).toggle(rowText.includes(searchTerm));
-        });
-    });
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vulnerability Guide - VulnSleuth</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body data-theme="{{ session.get('theme', 'light') }}">
+    {% include 'partials/navbar.html' %}
     
-    // View vulnerability details
-    $('.view-details').click(function() {
-        var vuln = JSON.parse($(this).attr('data-vuln'));
+    <div class="container">
+        {% include 'partials/sidebar.html' %}
         
-        var html = '<div class="row">';
-        html += '<div class="col-md-6">';
-        html += '<h6>Basic Information</h6>';
-        html += '<table class="table table-sm">';
-        html += '<tr><td><strong>Title:</strong></td><td>' + (vuln.title || vuln.name || 'Unknown') + '</td></tr>';
-        html += '<tr><td><strong>Severity:</strong></td><td><span class="vulnerability-badge ' + vuln.severity + '">' + vuln.severity.toUpperCase() + '</span></td></tr>';
-        html += '<tr><td><strong>Target:</strong></td><td>' + (vuln.target || 'N/A') + '</td></tr>';
-        if (vuln.port) html += '<tr><td><strong>Port:</strong></td><td>' + vuln.port + '</td></tr>';
-        if (vuln.service) html += '<tr><td><strong>Service:</strong></td><td>' + vuln.service + '</td></tr>';
-        if (vuln.cvss_score) html += '<tr><td><strong>CVSS Score:</strong></td><td>' + vuln.cvss_score + '</td></tr>';
-        html += '</table>';
-        html += '</div>';
-        
-        html += '<div class="col-md-6">';
-        html += '<h6>Technical Details</h6>';
-        if (vuln.description) {
-            html += '<p class="small">' + vuln.description + '</p>';
-        }
-        if (vuln.cve_id) {
-            html += '<p><strong>CVE:</strong> <a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=' + vuln.cve_id + '" target="_blank">' + vuln.cve_id + '</a></p>';
-        }
-        if (vuln.solution) {
-            html += '<h6>Solution</h6>';
-            html += '<p class="small">' + vuln.solution + '</p>';
-        }
-        if (vuln.references && vuln.references.length > 0) {
-            html += '<h6>References</h6>';
-            html += '<ul class="small">';
-            vuln.references.forEach(function(ref) {
-                html += '<li><a href="' + ref + '" target="_blank">' + ref + '</a></li>';
+        <main class="main-content">
+            <div class="page-header">
+                <h1><i class="fas fa-shield-virus"></i> Vulnerability Guide</h1>
+                <p>Comprehensive guide to common security vulnerabilities, their causes, and prevention methods</p>
+            </div>
+
+            <!-- Search and Filter -->
+            <div class="card">
+                <div class="filter-bar">
+                    <div class="search-group">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="vulnSearch" placeholder="Search vulnerabilities..." onkeyup="filterVulnerabilities()">
+                    </div>
+                    <div class="filter-group">
+                        <label>Severity:</label>
+                        <select id="severityFilter" onchange="filterVulnerabilities()">
+                            <option value="all">All</option>
+                            <option value="critical">Critical</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Category:</label>
+                        <select id="categoryFilter" onchange="filterVulnerabilities()">
+                            <option value="all">All</option>
+                            <option value="injection">Injection</option>
+                            <option value="authentication">Authentication</option>
+                            <option value="cryptographic">Cryptographic</option>
+                            <option value="configuration">Configuration</option>
+                            <option value="access-control">Access Control</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vulnerability Cards -->
+            <div class="vulnerabilities-list">
+                
+                <!-- SQL Injection -->
+                <div class="card vuln-card" data-severity="critical" data-category="injection">
+                    <div class="card-header">
+                        <div>
+                            <h3><i class="fas fa-database"></i> SQL Injection</h3>
+                            <span class="badge badge-danger">Critical</span>
+                            <span class="badge badge-secondary">Injection</span>
+                        </div>
+                    </div>
+                    <div class="vuln-content">
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-info-circle"></i> What is it?</h4>
+                            <p>SQL Injection is a code injection technique that exploits vulnerabilities in an application's database layer. Attackers insert malicious SQL code into application queries, allowing them to manipulate or access sensitive data.</p>
+                        </div>
+                        
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-exclamation-triangle"></i> How it Occurs</h4>
+                            <ul>
+                                <li>Unvalidated user input directly concatenated into SQL queries</li>
+                                <li>Dynamic query construction without proper escaping</li>
+                                <li>Lack of input sanitization and validation</li>
+                                <li>Improper use of stored procedures</li>
+                            </ul>
+                            <div class="code-example">
+                                <strong>Vulnerable Code:</strong>
+                                <pre><code>query = "SELECT * FROM users WHERE username='" + username + "'"</code></pre>
+                            </div>
+                        </div>
+                        
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-shield-alt"></i> Prevention Methods</h4>
+                            <ul>
+                                <li><strong>Use Parameterized Queries:</strong> Always use prepared statements with bound parameters</li>
+                                <li><strong>Input Validation:</strong> Validate and sanitize all user inputs</li>
+                                <li><strong>Least Privilege:</strong> Database accounts should have minimal necessary permissions</li>
+                                <li><strong>ORM Frameworks:</strong> Use Object-Relational Mapping tools that handle escaping</li>
+                                <li><strong>WAF:</strong> Deploy Web Application Firewall to filter malicious requests</li>
+                            </ul>
+                            <div class="code-example">
+                                <strong>Secure Code:</strong>
+                                <pre><code>cursor.execute("SELECT * FROM users WHERE username=?", (username,))</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cross-Site Scripting (XSS) -->
+                <div class="card vuln-card" data-severity="high" data-category="injection">
+                    <div class="card-header">
+                        <div>
+                            <h3><i class="fas fa-code"></i> Cross-Site Scripting (XSS)</h3>
+                            <span class="badge badge-danger">High</span>
+                            <span class="badge badge-secondary">Injection</span>
+                        </div>
+                    </div>
+                    <div class="vuln-content">
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-info-circle"></i> What is it?</h4>
+                            <p>XSS allows attackers to inject malicious scripts into web pages viewed by other users. The malicious script executes in the victim's browser, potentially stealing cookies, session tokens, or other sensitive information.</p>
+                        </div>
+                        
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-exclamation-triangle"></i> How it Occurs</h4>
+                            <ul>
+                                <li>Unescaped user input rendered in HTML pages</li>
+                                <li>Reflected input in URLs, forms, or error messages</li>
+                                <li>Stored malicious scripts in databases</li>
+                                <li>DOM-based manipulation with untrusted data</li>
+                            </ul>
+                            <div class="code-example">
+                                <strong>Vulnerable Code:</strong>
+                                <pre><code>&lt;div&gt;Hello {{ username }}&lt;/div&gt;  <!-- No escaping --></code></pre>
+                            </div>
+                        </div>
+                        
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-shield-alt"></i> Prevention Methods</h4>
+                            <ul>
+                                <li><strong>Output Encoding:</strong> HTML-encode all user-controlled data</li>
+                                <li><strong>Content Security Policy:</strong> Implement CSP headers to restrict script sources</li>
+                                <li><strong>Input Validation:</strong> Validate and sanitize all inputs</li>
+                                <li><strong>HttpOnly Cookies:</strong> Set HttpOnly flag on sensitive cookies</li>
+                                <li><strong>Template Engines:</strong> Use auto-escaping template engines</li>
+                            </ul>
+                            <div class="code-example">
+                                <strong>Secure Code:</strong>
+                                <pre><code>&lt;div&gt;Hello {{ username|e }}&lt;/div&gt;  <!-- Escaped --></code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cross-Site Request Forgery (CSRF) -->
+                <div class="card vuln-card" data-severity="high" data-category="authentication">
+                    <div class="card-header">
+                        <div>
+                            <h3><i class="fas fa-user-secret"></i> Cross-Site Request Forgery (CSRF)</h3>
+                            <span class="badge badge-danger">High</span>
+                            <span class="badge badge-secondary">Authentication</span>
+                        </div>
+                    </div>
+                    <div class="vuln-content">
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-info-circle"></i> What is it?</h4>
+                            <p>CSRF tricks authenticated users into executing unwanted actions on a web application. The attack leverages the user's authenticated session to perform unauthorized operations.</p>
+                        </div>
+                        
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-exclamation-triangle"></i> How it Occurs</h4>
+                            <ul>
+                                <li>State-changing requests without anti-CSRF tokens</li>
+                                <li>Predictable request patterns</li>
+                                <li>Lack of origin verification</li>
+                                <li>Session cookies without SameSite attribute</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-shield-alt"></i> Prevention Methods</h4>
+                            <ul>
+                                <li><strong>CSRF Tokens:</strong> Include unique tokens in all state-changing requests</li>
+                                <li><strong>SameSite Cookies:</strong> Set SameSite attribute on cookies</li>
+                                <li><strong>Origin Verification:</strong> Check Origin and Referer headers</li>
+                                <li><strong>Re-authentication:</strong> Require re-authentication for sensitive actions</li>
+                                <li><strong>Custom Headers:</strong> Use custom headers for AJAX requests</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Broken Authentication -->
+                <div class="card vuln-card" data-severity="critical" data-category="authentication">
+                    <div class="card-header">
+                        <div>
+                            <h3><i class="fas fa-key"></i> Broken Authentication</h3>
+                            <span class="badge badge-danger">Critical</span>
+                            <span class="badge badge-secondary">Authentication</span>
+                        </div>
+                    </div>
+                    <div class="vuln-content">
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-info-circle"></i> What is it?</h4>
+                            <p>Authentication vulnerabilities allow attackers to compromise passwords, keys, or session tokens, or exploit implementation flaws to assume other users' identities temporarily or permanently.</p>
+                        </div>
+                        
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-exclamation-triangle"></i> How it Occurs</h4>
+                            <ul>
+                                <li>Weak password policies</li>
+                                <li>Credential stuffing attacks</li>
+                                <li>Predictable session IDs</li>
+                                <li>Session fixation vulnerabilities</li>
+                                <li>Lack of multi-factor authentication</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-shield-alt"></i> Prevention Methods</h4>
+                            <ul>
+                                <li><strong>Strong Password Policy:</strong> Enforce complex password requirements</li>
+                                <li><strong>Multi-Factor Authentication:</strong> Implement MFA for all users</li>
+                                <li><strong>Secure Session Management:</strong> Use cryptographically random session IDs</li>
+                                <li><strong>Account Lockout:</strong> Implement rate limiting and account lockout</li>
+                                <li><strong>Password Hashing:</strong> Use strong hashing algorithms (bcrypt, Argon2)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sensitive Data Exposure -->
+                <div class="card vuln-card" data-severity="critical" data-category="cryptographic">
+                    <div class="card-header">
+                        <div>
+                            <h3><i class="fas fa-lock-open"></i> Sensitive Data Exposure</h3>
+                            <span class="badge badge-danger">Critical</span>
+                            <span class="badge badge-secondary">Cryptographic</span>
+                        </div>
+                    </div>
+                    <div class="vuln-content">
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-info-circle"></i> What is it?</h4>
+                            <p>Sensitive data exposure occurs when applications don't adequately protect sensitive information such as financial data, healthcare records, or personal information.</p>
+                        </div>
+                        
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-exclamation-triangle"></i> How it Occurs</h4>
+                            <ul>
+                                <li>Transmitting data in clear text</li>
+                                <li>Weak or outdated cryptographic algorithms</li>
+                                <li>Improper key management</li>
+                                <li>Lack of encryption at rest</li>
+                                <li>Exposing sensitive data in logs or error messages</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-shield-alt"></i> Prevention Methods</h4>
+                            <ul>
+                                <li><strong>Encrypt Data in Transit:</strong> Always use HTTPS/TLS</li>
+                                <li><strong>Encrypt Data at Rest:</strong> Encrypt sensitive data in databases</li>
+                                <li><strong>Strong Algorithms:</strong> Use modern encryption algorithms (AES-256)</li>
+                                <li><strong>Key Management:</strong> Implement proper key rotation and storage</li>
+                                <li><strong>Data Classification:</strong> Identify and classify sensitive data</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Insecure Deserialization -->
+                <div class="card vuln-card" data-severity="critical" data-category="injection">
+                    <div class="card-header">
+                        <div>
+                            <h3><i class="fas fa-bug"></i> Insecure Deserialization</h3>
+                            <span class="badge badge-danger">Critical</span>
+                            <span class="badge badge-secondary">Injection</span>
+                        </div>
+                    </div>
+                    <div class="vuln-content">
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-info-circle"></i> What is it?</h4>
+                            <p>Insecure deserialization vulnerabilities occur when untrusted data is used to abuse application logic, inflict denial of service, or execute arbitrary code.</p>
+                        </div>
+                        
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-exclamation-triangle"></i> How it Occurs</h4>
+                            <ul>
+                                <li>Deserializing untrusted data without validation</li>
+                                <li>Using insecure deserialization libraries</li>
+                                <li>Lack of integrity checks on serialized objects</li>
+                                <li>Accepting serialized data from untrusted sources</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-shield-alt"></i> Prevention Methods</h4>
+                            <ul>
+                                <li><strong>Avoid Deserialization:</strong> Use data formats like JSON instead</li>
+                                <li><strong>Integrity Checks:</strong> Implement digital signatures on serialized objects</li>
+                                <li><strong>Strict Type Constraints:</strong> Enforce strict type constraints during deserialization</li>
+                                <li><strong>Isolation:</strong> Run deserialization code in low privilege environments</li>
+                                <li><strong>Monitoring:</strong> Log and monitor deserialization exceptions</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security Misconfiguration -->
+                <div class="card vuln-card" data-severity="high" data-category="configuration">
+                    <div class="card-header">
+                        <div>
+                            <h3><i class="fas fa-cog"></i> Security Misconfiguration</h3>
+                            <span class="badge badge-danger">High</span>
+                            <span class="badge badge-secondary">Configuration</span>
+                        </div>
+                    </div>
+                    <div class="vuln-content">
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-info-circle"></i> What is it?</h4>
+                            <p>Security misconfiguration is the most common vulnerability, resulting from insecure default configurations, incomplete setups, open cloud storage, or verbose error messages.</p>
+                        </div>
+                        
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-exclamation-triangle"></i> How it Occurs</h4>
+                            <ul>
+                                <li>Default credentials still active</li>
+                                <li>Unnecessary features enabled</li>
+                                <li>Directory listing enabled</li>
+                                <li>Detailed error messages exposed</li>
+                                <li>Outdated software components</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-shield-alt"></i> Prevention Methods</h4>
+                            <ul>
+                                <li><strong>Hardening Process:</strong> Implement repeatable hardening process</li>
+                                <li><strong>Minimal Platform:</strong> Remove unused features and frameworks</li>
+                                <li><strong>Update Management:</strong> Regular security patches and updates</li>
+                                <li><strong>Segmentation:</strong> Proper network segmentation</li>
+                                <li><strong>Automated Verification:</strong> Automated security configuration scanning</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Broken Access Control -->
+                <div class="card vuln-card" data-severity="critical" data-category="access-control">
+                    <div class="card-header">
+                        <div>
+                            <h3><i class="fas fa-user-lock"></i> Broken Access Control</h3>
+                            <span class="badge badge-danger">Critical</span>
+                            <span class="badge badge-secondary">Access Control</span>
+                        </div>
+                    </div>
+                    <div class="vuln-content">
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-info-circle"></i> What is it?</h4>
+                            <p>Access control enforces policies such that users cannot act outside of their intended permissions. Failures typically lead to unauthorized information disclosure, modification, or destruction.</p>
+                        </div>
+                        
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-exclamation-triangle"></i> How it Occurs</h4>
+                            <ul>
+                                <li>Bypassing access control checks by modifying URLs</li>
+                                <li>Privilege escalation through parameter tampering</li>
+                                <li>Insecure Direct Object References (IDOR)</li>
+                                <li>Missing function-level access control</li>
+                                <li>CORS misconfiguration</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="vuln-section">
+                            <h4><i class="fas fa-shield-alt"></i> Prevention Methods</h4>
+                            <ul>
+                                <li><strong>Deny by Default:</strong> Implement deny-by-default access control</li>
+                                <li><strong>Centralized Mechanism:</strong> Use centralized access control mechanisms</li>
+                                <li><strong>Ownership Records:</strong> Enforce record ownership rather than allowing users to create, read, update, or delete records</li>
+                                <li><strong>Disable Directory Listing:</strong> Disable web server directory listing</li>
+                                <li><strong>Rate Limiting:</strong> Implement rate limiting on API endpoints</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Resources Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-book"></i> Additional Resources</h3>
+                </div>
+                <div class="resources-grid">
+                    <a href="https://owasp.org/www-project-top-ten/" target="_blank" class="resource-card">
+                        <i class="fas fa-shield-alt"></i>
+                        <h4>OWASP Top 10</h4>
+                        <p>The standard awareness document for web application security</p>
+                    </a>
+                    <a href="https://cwe.mitre.org/" target="_blank" class="resource-card">
+                        <i class="fas fa-list"></i>
+                        <h4>CWE List</h4>
+                        <p>Common Weakness Enumeration</p>
+                    </a>
+                    <a href="https://nvd.nist.gov/" target="_blank" class="resource-card">
+                        <i class="fas fa-database"></i>
+                        <h4>NVD</h4>
+                        <p>National Vulnerability Database</p>
+                    </a>
+                    <a href="https://portswigger.net/web-security" target="_blank" class="resource-card">
+                        <i class="fas fa-graduation-cap"></i>
+                        <h4>Web Security Academy</h4>
+                        <p>Free online training from PortSwigger</p>
+                    </a>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // Initialize theme
+        initializeTheme();
+
+        // Filter vulnerabilities based on search and filters
+        function filterVulnerabilities() {
+            const searchTerm = document.getElementById('vulnSearch').value.toLowerCase();
+            const severityFilter = document.getElementById('severityFilter').value;
+            const categoryFilter = document.getElementById('categoryFilter').value;
+            const vulnCards = document.querySelectorAll('.vuln-card');
+
+            vulnCards.forEach(card => {
+                const cardText = card.textContent.toLowerCase();
+                const cardSeverity = card.getAttribute('data-severity');
+                const cardCategory = card.getAttribute('data-category');
+
+                const matchesSearch = cardText.includes(searchTerm);
+                const matchesSeverity = severityFilter === 'all' || cardSeverity === severityFilter;
+                const matchesCategory = categoryFilter === 'all' || cardCategory === categoryFilter;
+
+                if (matchesSearch && matchesSeverity && matchesCategory) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
             });
-            html += '</ul>';
         }
-        html += '</div>';
-        html += '</div>';
-        
-        $('#vulnDetailsContent').html(html);
-        $('#vulnDetailsModal').modal('show');
-    });
-    
-    // Apply filters
-    $('#applyFilters').click(function() {
-        var selectedSeverities = [];
-        $('.severity-filter:checked').each(function() {
-            selectedSeverities.push($(this).val());
-        });
-        
-        var targetFilter = $('#targetFilter').val().toLowerCase();
-        
-        $('#vulnTable tbody tr').each(function() {
-            var severity = $(this).data('severity');
-            var target = $(this).data('target').toLowerCase();
-            
-            var showSeverity = selectedSeverities.length === 0 || selectedSeverities.includes(severity);
-            var showTarget = !targetFilter || target.includes(targetFilter);
-            
-            $(this).toggle(showSeverity && showTarget);
-        });
-        
-        $('#filterModal').modal('hide');
-    });
-    
-    // Clear filters
-    $('#clearFilters').click(function() {
-        $('.severity-filter').prop('checked', true);
-        $('#targetFilter').val('');
-        $('#vulnTable tbody tr').show();
-        $('#filterModal').modal('hide');
-    });
-    
-    // Export vulnerabilities
-    $('#exportBtn').click(function() {
-        // This would typically generate and download a CSV/PDF report
-        alert('Export functionality would be implemented here');
-    });
-    
-    // Initialize tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-});
-</script>
-{% endblock %}
+    </script>
+</body>
+</html>

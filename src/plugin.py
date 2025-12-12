@@ -346,14 +346,20 @@ class PluginManager:
         self.logger.info(f"Executing plugin {plugin_name} on target {target}")
         
         try:
+            # Create a config copy without conflicting parameters
+            # Remove target, timeout, threads to avoid duplicate parameter errors
+            excluded_keys = {'target', 'timeout', 'threads', 'aggressive', 'user_id', 'username'}
+            config_filtered = {k: v for k, v in scan_config.items() if k not in excluded_keys}
+            
             # Pre-check validation
-            if not plugin.pre_check(target, **scan_config):
+            if not plugin.pre_check(target, **config_filtered):
                 self.logger.warning(f"Plugin {plugin_name} pre-check failed for target {target}")
                 return []
             
-            # Execute main check with timeout
-            timeout = self.plugin_config.get('plugin_timeout', 120)
-            findings = self._execute_with_timeout(plugin.check, timeout, target, **scan_config)
+            # Execute main check with timeout (ensure it's an integer, strip comments)
+            timeout_val = str(self.plugin_config.get('plugin_timeout', 120)).split('#')[0].strip()
+            timeout = int(timeout_val) if timeout_val else 120
+            findings = self._execute_with_timeout(plugin.check, timeout, target, **config_filtered)
             
             # Post-process findings
             processed_findings = plugin.post_check(findings)

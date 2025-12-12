@@ -1,638 +1,236 @@
-{% extends "base.html" %}
-
-{% block title %}Settings - VulnSleuth{% endblock %}
-
-{% block content %}
-<div class="container-fluid">
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h2 mb-0">
-            <i class="fas fa-cog me-2"></i>Settings
-        </h1>
-        <div>
-            <button class="btn btn-outline-secondary me-2" id="resetDefaults">
-                <i class="fas fa-undo me-2"></i>Reset to Defaults
-            </button>
-            <button class="btn btn-success" id="saveSettings">
-                <i class="fas fa-save me-2"></i>Save Settings
-            </button>
-        </div>
-    </div>
-
-    <!-- Settings Navigation -->
-    <div class="row">
-        <div class="col-lg-3 col-md-4 mb-4">
-            <div class="card">
-                <div class="card-body">
-                    <h6 class="card-title">Settings Categories</h6>
-                    <div class="list-group list-group-flush">
-                        <a href="#general" class="list-group-item list-group-item-action active" data-section="general">
-                            <i class="fas fa-cog me-2"></i>General
-                        </a>
-                        <a href="#scanning" class="list-group-item list-group-item-action" data-section="scanning">
-                            <i class="fas fa-search me-2"></i>Scanning
-                        </a>
-                        <a href="#reporting" class="list-group-item list-group-item-action" data-section="reporting">
-                            <i class="fas fa-file-alt me-2"></i>Reporting
-                        </a>
-                        <a href="#notifications" class="list-group-item list-group-item-action" data-section="notifications">
-                            <i class="fas fa-bell me-2"></i>Notifications
-                        </a>
-                        <a href="#security" class="list-group-item list-group-item-action" data-section="security">
-                            <i class="fas fa-shield-alt me-2"></i>Security
-                        </a>
-                        <a href="#advanced" class="list-group-item list-group-item-action" data-section="advanced">
-                            <i class="fas fa-tools me-2"></i>Advanced
-                        </a>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - VulnSleuth</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body data-theme="{{ theme }}">
+    {% include 'partials/navbar.html' %}
+    
+    <div class="container">
+        {% include 'partials/sidebar.html' %}
+        
+        <main class="main-content">
+            <div class="page-header">
+                <div>
+                    <h1><i class="fas fa-cog"></i> Settings</h1>
+                    <p>Customize your VulnSleuth experience</p>
+                </div>
+            </div>
+            
+            <div class="settings-container">
+                <!-- Theme Settings -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-palette"></i> Appearance</h3>
+                    </div>
+                    <div class="settings-section">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>Theme</h4>
+                                <p>Choose your preferred color theme</p>
+                            </div>
+                            <div class="setting-control">
+                                <div class="theme-selector">
+                                    <div class="theme-option" onclick="changeTheme('light')" data-theme="light">
+                                        <div class="theme-preview theme-light">
+                                            <i class="fas fa-sun"></i>
+                                        </div>
+                                        <span>Light</span>
+                                    </div>
+                                    <div class="theme-option" onclick="changeTheme('dark')" data-theme="dark">
+                                        <div class="theme-preview theme-dark">
+                                            <i class="fas fa-moon"></i>
+                                        </div>
+                                        <span>Dark</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Account Settings -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-user"></i> Account</h3>
+                    </div>
+                    <div class="settings-section">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>Username</h4>
+                                <p>{{ user.username }}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>Email</h4>
+                                <p>{{ user.email }}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>Member Since</h4>
+                                <p>{{ user.created_at }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Security Settings -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-shield-alt"></i> Security</h3>
+                    </div>
+                    <div class="settings-section">
+                        <form id="passwordForm">
+                            <div class="form-group">
+                                <label for="current_password">
+                                    <i class="fas fa-lock"></i> Current Password
+                                </label>
+                                <input type="password" id="current_password" name="current_password" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="new_password">
+                                    <i class="fas fa-lock"></i> New Password
+                                </label>
+                                <input type="password" id="new_password" name="new_password" required>
+                                <small>Minimum 8 characters</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="confirm_password">
+                                    <i class="fas fa-lock"></i> Confirm New Password
+                                </label>
+                                <input type="password" id="confirm_password" name="confirm_password" required>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Update Password
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- About -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-info-circle"></i> About</h3>
+                    </div>
+                    <div class="settings-section">
+                        <div class="about-content">
+                            <div class="about-logo">
+                                <i class="fas fa-shield-alt"></i>
+                                <h2>VulnSleuth</h2>
+                            </div>
+                            <p>Advanced Vulnerability Scanner & Security Assessment Tool</p>
+                            <div class="about-links">
+                                <a href="https://github.com/devdas36" target="_blank">
+                                    <i class="fab fa-github"></i> GitHub
+                                </a>
+                                <a href="mailto:d3vdas36@gmail.com">
+                                    <i class="fas fa-envelope"></i> Contact
+                                </a>
+                            </div>
+                            <p class="text-muted">Author: Devdas</p>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="col-lg-9 col-md-8">
-            <!-- General Settings -->
-            <div class="card settings-section" id="general">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-cog me-2"></i>General Settings
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="appName" class="form-label">Application Name</label>
-                                    <input type="text" class="form-control" id="appName" value="VulnSleuth">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="theme" class="form-label">Theme</label>
-                                    <select class="form-select" id="theme">
-                                        <option value="light">Light</option>
-                                        <option value="dark">Dark</option>
-                                        <option value="auto">Auto (System)</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="language" class="form-label">Language</label>
-                                    <select class="form-select" id="language">
-                                        <option value="en">English</option>
-                                        <option value="es">Spanish</option>
-                                        <option value="fr">French</option>
-                                        <option value="de">German</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="timezone" class="form-label">Timezone</label>
-                                    <select class="form-select" id="timezone">
-                                        <option value="UTC">UTC</option>
-                                        <option value="America/New_York">Eastern Time</option>
-                                        <option value="America/Chicago">Central Time</option>
-                                        <option value="America/Denver">Mountain Time</option>
-                                        <option value="America/Los_Angeles">Pacific Time</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="autoSave" checked>
-                                <label class="form-check-label" for="autoSave">
-                                    Auto-save scan results
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="showBeta">
-                                <label class="form-check-label" for="showBeta">
-                                    Enable beta features
-                                </label>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Scanning Settings -->
-            <div class="card settings-section d-none" id="scanning">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-search me-2"></i>Scanning Configuration
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="defaultThreads" class="form-label">Default Thread Count</label>
-                                    <input type="number" class="form-control" id="defaultThreads" value="10" min="1" max="100">
-                                    <div class="form-text">Number of concurrent scanning threads</div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="timeout" class="form-label">Scan Timeout (seconds)</label>
-                                    <input type="number" class="form-control" id="timeout" value="30" min="5" max="300">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="retries" class="form-label">Retry Attempts</label>
-                                    <input type="number" class="form-control" id="retries" value="3" min="0" max="10">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="delay" class="form-label">Delay Between Requests (ms)</label>
-                                    <input type="number" class="form-control" id="delay" value="100" min="0" max="5000">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="userAgent" class="form-label">User Agent String</label>
-                            <input type="text" class="form-control" id="userAgent" 
-                                   value="VulnSleuth/2.0 (Security Scanner)">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="excludePorts" class="form-label">Excluded Ports</label>
-                            <input type="text" class="form-control" id="excludePorts" 
-                                   placeholder="e.g., 25,465,587" 
-                                   value="">
-                            <div class="form-text">Comma-separated list of ports to exclude from scanning</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="aggressiveScanning">
-                                <label class="form-check-label" for="aggressiveScanning">
-                                    Enable aggressive scanning mode
-                                </label>
-                                <div class="form-text text-warning">
-                                    <i class="fas fa-exclamation-triangle me-1"></i>
-                                    May cause high network traffic and potential service disruption
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="saveRawOutput" checked>
-                                <label class="form-check-label" for="saveRawOutput">
-                                    Save raw scan output
-                                </label>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Reporting Settings -->
-            <div class="card settings-section d-none" id="reporting">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-file-alt me-2"></i>Reporting Configuration
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="defaultFormat" class="form-label">Default Report Format</label>
-                                    <select class="form-select" id="defaultFormat">
-                                        <option value="pdf">PDF</option>
-                                        <option value="html">HTML</option>
-                                        <option value="json">JSON</option>
-                                        <option value="csv">CSV</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="reportTemplate" class="form-label">Default Template</label>
-                                    <select class="form-select" id="reportTemplate">
-                                        <option value="standard">Standard</option>
-                                        <option value="executive">Executive</option>
-                                        <option value="technical">Technical</option>
-                                        <option value="minimal">Minimal</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="companyName" class="form-label">Company Name</label>
-                            <input type="text" class="form-control" id="companyName" 
-                                   placeholder="Your Organization Name">
-                            <div class="form-text">Appears in report headers</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="reportLogo" class="form-label">Company Logo URL</label>
-                            <input type="url" class="form-control" id="reportLogo" 
-                                   placeholder="https://example.com/logo.png">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="includeCharts" checked>
-                                <label class="form-check-label" for="includeCharts">
-                                    Include charts and graphs by default
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="autoGenerate">
-                                <label class="form-check-label" for="autoGenerate">
-                                    Auto-generate reports after scans
-                                </label>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Notifications Settings -->
-            <div class="card settings-section d-none" id="notifications">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-bell me-2"></i>Notification Settings
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form>
-                        <h6>Email Notifications</h6>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="emailServer" class="form-label">SMTP Server</label>
-                                    <input type="text" class="form-control" id="emailServer" 
-                                           placeholder="smtp.gmail.com">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="emailPort" class="form-label">SMTP Port</label>
-                                    <input type="number" class="form-control" id="emailPort" value="587">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="emailUsername" class="form-label">Username</label>
-                                    <input type="email" class="form-control" id="emailUsername">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="emailPassword" class="form-label">Password</label>
-                                    <input type="password" class="form-control" id="emailPassword">
-                                    <div class="form-text">Encrypted and stored securely</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="emailRecipients" class="form-label">Default Recipients</label>
-                            <input type="text" class="form-control" id="emailRecipients" 
-                                   placeholder="admin@company.com, security@company.com">
-                            <div class="form-text">Comma-separated email addresses</div>
-                        </div>
-                        
-                        <hr>
-                        
-                        <h6>Notification Triggers</h6>
-                        <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="notifyComplete" checked>
-                                <label class="form-check-label" for="notifyComplete">
-                                    Scan completion
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="notifyCritical" checked>
-                                <label class="form-check-label" for="notifyCritical">
-                                    Critical vulnerabilities detected
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="notifyErrors">
-                                <label class="form-check-label" for="notifyErrors">
-                                    Scan errors and failures
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <button type="button" class="btn btn-outline-primary" id="testEmail">
-                            <i class="fas fa-envelope me-2"></i>Send Test Email
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Security Settings -->
-            <div class="card settings-section d-none" id="security">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-shield-alt me-2"></i>Security Configuration
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form>
-                        <h6>Authentication</h6>
-                        <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="requireAuth" checked>
-                                <label class="form-check-label" for="requireAuth">
-                                    Require authentication for web interface
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="sessionTimeout" class="form-label">Session Timeout (minutes)</label>
-                                    <input type="number" class="form-control" id="sessionTimeout" value="30" min="5" max="480">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="maxAttempts" class="form-label">Max Login Attempts</label>
-                                    <input type="number" class="form-control" id="maxAttempts" value="5" min="1" max="20">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <hr>
-                        
-                        <h6>Data Protection</h6>
-                        <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="encryptDatabase" checked>
-                                <label class="form-check-label" for="encryptDatabase">
-                                    Encrypt database at rest
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="auditLogging" checked>
-                                <label class="form-check-label" for="auditLogging">
-                                    Enable audit logging
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="dataRetention" class="form-label">Data Retention (days)</label>
-                            <input type="number" class="form-control" id="dataRetention" value="365" min="1" max="3650">
-                            <div class="form-text">Automatically delete scan data older than specified days</div>
-                        </div>
-                        
-                        <button type="button" class="btn btn-outline-danger" id="changePassword">
-                            <i class="fas fa-key me-2"></i>Change Password
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Advanced Settings -->
-            <div class="card settings-section d-none" id="advanced">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-tools me-2"></i>Advanced Configuration
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        <strong>Warning:</strong> These settings are for advanced users only. Incorrect configuration may affect system stability.
-                    </div>
-                    
-                    <form>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="dbPath" class="form-label">Database Path</label>
-                                    <input type="text" class="form-control" id="dbPath" value="./vulnsleuth.db">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="logLevel" class="form-label">Log Level</label>
-                                    <select class="form-select" id="logLevel">
-                                        <option value="DEBUG">Debug</option>
-                                        <option value="INFO" selected>Info</option>
-                                        <option value="WARNING">Warning</option>
-                                        <option value="ERROR">Error</option>
-                                        <option value="CRITICAL">Critical</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="customPlugins" class="form-label">Custom Plugin Directory</label>
-                            <input type="text" class="form-control" id="customPlugins" placeholder="/path/to/plugins">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="nmapPath" class="form-label">Nmap Executable Path</label>
-                            <input type="text" class="form-control" id="nmapPath" value="nmap">
-                            <div class="form-text">Leave as 'nmap' if it's in your PATH</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="debugMode">
-                                <label class="form-check-label" for="debugMode">
-                                    Enable debug mode
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="devMode">
-                                <label class="form-check-label" for="devMode">
-                                    Developer mode
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <hr>
-                        
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-outline-warning" id="exportConfig">
-                                <i class="fas fa-download me-2"></i>Export Configuration
-                            </button>
-                            <button type="button" class="btn btn-outline-info" id="importConfig">
-                                <i class="fas fa-upload me-2"></i>Import Configuration
-                            </button>
-                            <input type="file" id="configFile" class="d-none" accept=".json,.conf">
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+        </main>
     </div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-$(document).ready(function() {
-    // Settings navigation
-    $('.list-group-item').click(function(e) {
-        e.preventDefault();
-        
-        // Update active state
-        $('.list-group-item').removeClass('active');
-        $(this).addClass('active');
-        
-        // Show corresponding section
-        var section = $(this).data('section');
-        $('.settings-section').addClass('d-none');
-        $('#' + section).removeClass('d-none');
-    });
     
-    // Save settings
-    $('#saveSettings').click(function() {
-        // Collect all form data
-        var settings = {};
-        
-        // General settings
-        settings.general = {
-            appName: $('#appName').val(),
-            theme: $('#theme').val(),
-            language: $('#language').val(),
-            timezone: $('#timezone').val(),
-            autoSave: $('#autoSave').prop('checked'),
-            showBeta: $('#showBeta').prop('checked')
-        };
-        
-        // Scanning settings
-        settings.scanning = {
-            defaultThreads: $('#defaultThreads').val(),
-            timeout: $('#timeout').val(),
-            retries: $('#retries').val(),
-            delay: $('#delay').val(),
-            userAgent: $('#userAgent').val(),
-            excludePorts: $('#excludePorts').val(),
-            aggressiveScanning: $('#aggressiveScanning').prop('checked'),
-            saveRawOutput: $('#saveRawOutput').prop('checked')
-        };
-        
-        // Show saving state
-        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Saving...');
-        
-        // Simulate save
-        setTimeout(function() {
-            $('#saveSettings').prop('disabled', false).html('<i class="fas fa-save me-2"></i>Save Settings');
-            
-            // Show success message
-            var alertHtml = '<div class="alert alert-success alert-dismissible fade show" role="alert">' +
-                          '<i class="fas fa-check-circle me-2"></i>Settings saved successfully!' +
-                          '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
-                          '</div>';
-            $('.container-fluid').prepend(alertHtml);
-            
-            setTimeout(function() {
-                $('.alert').fadeOut();
-            }, 3000);
-        }, 1000);
-    });
-    
-    // Reset defaults
-    $('#resetDefaults').click(function() {
-        if (confirm('Are you sure you want to reset all settings to their default values? This action cannot be undone.')) {
-            location.reload();
-        }
-    });
-    
-    // Test email
-    $('#testEmail').click(function() {
-        var button = $(this);
-        button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Sending...');
-        
-        setTimeout(function() {
-            button.prop('disabled', false).html('<i class="fas fa-envelope me-2"></i>Send Test Email');
-            alert('Test email sent successfully!');
-        }, 2000);
-    });
-    
-    // Change password
-    $('#changePassword').click(function() {
-        alert('Password change modal would be shown here');
-    });
-    
-    // Export configuration
-    $('#exportConfig').click(function() {
-        var config = {
-            exportDate: new Date().toISOString(),
-            settings: {
-                // Configuration data would be collected here
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // Highlight current theme
+        document.addEventListener('DOMContentLoaded', () => {
+            const currentTheme = '{{ theme }}';
+            const themeOption = document.querySelector(`.theme-option[data-theme="${currentTheme}"]`);
+            if (themeOption) {
+                themeOption.classList.add('active');
             }
-        };
+        });
         
-        var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(config, null, 2));
-        var downloadAnchor = document.createElement('a');
-        downloadAnchor.setAttribute("href", dataStr);
-        downloadAnchor.setAttribute("download", "vulnsleuth-config.json");
-        downloadAnchor.click();
-    });
-    
-    // Import configuration
-    $('#importConfig').click(function() {
-        $('#configFile').click();
-    });
-    
-    $('#configFile').change(function() {
-        var file = this.files[0];
-        if (file) {
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    var config = JSON.parse(e.target.result);
-                    alert('Configuration imported successfully!');
-                    // Apply imported settings here
-                } catch (error) {
-                    alert('Error importing configuration: Invalid file format');
+        async function changeTheme(theme) {
+            try {
+                const response = await fetch('/api/settings/theme', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ theme })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('Theme updated successfully', 'success');
+                    document.body.setAttribute('data-theme', theme);
+                    
+                    // Update active state
+                    document.querySelectorAll('.theme-option').forEach(opt => {
+                        opt.classList.remove('active');
+                    });
+                    document.querySelector(`.theme-option[data-theme="${theme}"]`).classList.add('active');
+                } else {
+                    showNotification(data.message || 'Failed to update theme', 'error');
                 }
-            };
-            reader.readAsText(file);
+            } catch (error) {
+                showNotification('Failed to update theme: ' + error.message, 'error');
+            }
         }
-    });
-});
-</script>
-{% endblock %}
+        
+        document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const currentPassword = document.getElementById('current_password').value;
+            const newPassword = document.getElementById('new_password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
+            
+            // Validate passwords match
+            if (newPassword !== confirmPassword) {
+                showNotification('New passwords do not match', 'error');
+                return;
+            }
+            
+            // Validate password length
+            if (newPassword.length < 8) {
+                showNotification('Password must be at least 8 characters', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/settings/password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('Password updated successfully', 'success');
+                    document.getElementById('passwordForm').reset();
+                } else {
+                    showNotification(data.message || 'Failed to update password', 'error');
+                }
+            } catch (error) {
+                showNotification('Failed to update password: ' + error.message, 'error');
+            }
+        });
+    </script>
+</body>
+</html>

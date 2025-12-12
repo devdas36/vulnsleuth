@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plugins - VulnSleuth</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body data-theme="{{ theme }}">
+    {% include 'partials/navbar.html' %}
+    
+    <div class="container">
+        {% include 'partials/sidebar.html' %}
+        
+        <main class="main-content">
+            <div class="page-header">
+                <div>
+                    <h1><i class="fas fa-plug"></i> Security Plugins</h1>
+                    <p>Manage vulnerability detection modules</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" onclick="refreshPlugins()">
+                        <i class="fas fa-sync"></i> Refresh
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Plugin Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-puzzle-piece"></i>
+                    </div>
+                    <div class="stat-details">
+                        <h3>Total Plugins</h3>
+                        <p class="stat-value">{{ plugins|length }}</p>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon active">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-details">
+                        <h3>Active Plugins</h3>
+                        <p class="stat-value">{{ plugins|selectattr('enabled')|list|length }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Plugins Grid -->
+            <div class="plugins-grid">
+                {% for plugin in plugins %}
+                <div class="plugin-card card">
+                    <div class="plugin-header">
+                        <div class="plugin-icon">
+                            <i class="fas fa-shield-virus"></i>
+                        </div>
+                        <div class="plugin-toggle">
+                            <label class="switch">
+                                <input type="checkbox" 
+                                       {% if plugin.enabled %}checked{% endif %}
+                                       onchange="togglePlugin('{{ plugin.name }}', this.checked)">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="plugin-content">
+                        <h3>{% if 'Authentication' in plugin.name %}Authentication Bypass{% elif 'CVE' in plugin.name %}CVE Intelligence{% elif 'Database' in plugin.name %}Database Security{% elif 'Information' in plugin.name %}Information Disclosure{% elif 'Network' in plugin.name %}Network Reconnaissance{% elif 'SSL' in plugin.name %}SSL/TLS Audit{% elif 'Web' in plugin.name %}Web Security Scanner{% else %}{{ plugin.name }}{% endif %}</h3>
+                        <p class="plugin-description">{{ plugin.detailed_description if plugin.detailed_description else plugin.description }}</p>
+                        
+                        <div class="plugin-meta">
+                            <span class="badge badge-info">
+                                <i class="fas fa-tag"></i> {{ plugin.category }}
+                            </span>
+                            <span class="badge badge-secondary">
+                                <i class="fas fa-user"></i> Devdas
+                            </span>
+                        </div>
+                        
+                        {% if plugin.tags %}
+                        <div class="plugin-tags">
+                            {% for tag in plugin.tags %}
+                            <span class="tag">{{ tag }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="plugin-footer">
+                        <button class="btn btn-sm btn-secondary" onclick="showPluginDetails('{{ plugin.name }}')">
+                            <i class="fas fa-info-circle"></i> Details
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            {% if not plugins %}
+            <div class="empty-state card">
+                <i class="fas fa-puzzle-piece"></i>
+                <h3>No Plugins Found</h3>
+                <p>No security plugins are currently available</p>
+            </div>
+            {% endif %}
+        </main>
+    </div>
+    
+    <!-- Plugin Details Modal -->
+    <div id="pluginDetailsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-info-circle"></i> Plugin Details</h3>
+                <button class="btn btn-icon" onclick="closePluginModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="pluginDetailsBody">
+                <!-- Plugin details will be loaded here -->
+            </div>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        function showPluginDetails(pluginName) {
+            const plugins = {{ plugins|tojson }};
+            const plugin = plugins.find(p => p.name === pluginName);
+            
+            if (!plugin) return;
+            
+            const displayName = getPluginDisplayName(plugin.name);
+            const modal = document.getElementById('pluginDetailsModal');
+            const body = document.getElementById('pluginDetailsBody');
+            
+            body.innerHTML = `
+                <div class="plugin-detail-content">
+                    <h3>${displayName}</h3>
+                    <p class="plugin-description" style="margin: 1rem 0; line-height: 1.6;">${plugin.detailed_description || plugin.description}</p>
+                    <div class="plugin-meta" style="margin-top: 1.5rem;">
+                        <p><strong>Category:</strong> ${plugin.category}</p>
+                        <p><strong>Author:</strong> ${plugin.author || 'Devdas'}</p>
+                        <p><strong>Status:</strong> ${plugin.enabled ? '<span class="badge badge-success">Enabled</span>' : '<span class="badge badge-secondary">Disabled</span>'}</p>
+                    </div>
+                </div>
+            `;
+            
+            modal.style.display = 'flex';
+        }
+        
+        function closePluginModal() {
+            document.getElementById('pluginDetailsModal').style.display = 'none';
+        }
+        
+        function getPluginDisplayName(name) {
+            const nameMap = {
+                'AuthenticationBypassPlugin': 'Authentication Bypass',
+                'CVEIntelligencePlugin': 'CVE Intelligence',
+                'DatabaseSecurityPlugin': 'Database Security',
+                'InformationDisclosurePlugin': 'Information Disclosure',
+                'NetworkReconnaissancePlugin': 'Network Reconnaissance',
+                'SSLTLSAuditPlugin': 'SSL/TLS Audit',
+                'WebSecurityScannerPlugin': 'Web Security Scanner'
+            };
+            return nameMap[name] || name;
+        }
+
+        async function togglePlugin(pluginName, enabled) {
+            try {
+                const response = await fetch(`/api/plugins/toggle/${pluginName}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ enabled })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification(data.message, 'success');
+                    // Update active plugins count
+                    updatePluginStats();
+                } else {
+                    showNotification(data.message || 'Failed to toggle plugin', 'error');
+                }
+            } catch (error) {
+                showNotification('Failed to toggle plugin: ' + error.message, 'error');
+            }
+        }
+        
+        function showPluginDetails(pluginName) {
+            // Find plugin data
+            const plugins = {{ plugins|tojson|safe }};
+            const plugin = plugins.find(p => p.name === pluginName);
+            
+            if (plugin) {
+                const html = `
+                    <div class="plugin-details">
+                        <h2>${plugin.name}</h2>
+                        <p class="lead">${plugin.description}</p>
+                        
+                        <div class="detail-section">
+                            <h4><i class="fas fa-info"></i> Information</h4>
+                            <table class="details-table">
+                                <tr>
+                                    <td><strong>Category:</strong></td>
+                                    <td>${plugin.category}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Author:</strong></td>
+                                    <td>${plugin.author}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Status:</strong></td>
+                                    <td><span class="badge badge-${plugin.enabled ? 'success' : 'secondary'}">${plugin.enabled ? 'Enabled' : 'Disabled'}</span></td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        ${plugin.tags && plugin.tags.length > 0 ? `
+                        <div class="detail-section">
+                            <h4><i class="fas fa-tags"></i> Tags</h4>
+                            <div class="plugin-tags">
+                                ${plugin.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+                
+                document.getElementById('pluginDetailsBody').innerHTML = html;
+                document.getElementById('pluginDetailsModal').style.display = 'flex';
+            }
+        }
+        
+        function closePluginModal() {
+            document.getElementById('pluginDetailsModal').style.display = 'none';
+        }
+        
+        function updatePluginStats() {
+            const toggles = document.querySelectorAll('.plugin-card input[type="checkbox"]');
+            const activeCount = Array.from(toggles).filter(t => t.checked).length;
+            
+            // Update stats display
+            const statValues = document.querySelectorAll('.stat-value');
+            if (statValues[1]) {
+                statValues[1].textContent = activeCount;
+            }
+        }
+        
+        async function refreshPlugins() {
+            try {
+                const response = await fetch('/api/plugins/list');
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('Plugins refreshed', 'success');
+                    window.location.reload();
+                }
+            } catch (error) {
+                showNotification('Failed to refresh plugins', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

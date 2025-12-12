@@ -141,7 +141,7 @@ class VulnSleuthTUI:
         status_table.add_column(style="green", justify="right")
         
         status_table.add_row(
-            f"[bold]VulnSleuth v2.0[/] | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            f"[bold]VulnSleuth[/] | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             f"Plugins: {len(self.plugin_manager.list_plugins()) if self.plugin_manager else 0}"
         )
         
@@ -447,8 +447,22 @@ class VulnSleuthTUI:
         
         with console.status(f"[bold cyan]Generating {report_format.upper()} report...", spinner="dots"):
             try:
+                from reporter import ReportConfig
                 reporter = VulnSleuthReporter(self.config)
-                report_path = reporter.generate_report(results, scan_config, output_path, report_format)
+                
+                # Create ReportConfig object
+                report_cfg = ReportConfig(
+                    report_id=f"report_{int(time.time())}",
+                    title=f"Vulnerability Scan Report - {target}",
+                    format=report_format,
+                    output_path=output_path,
+                    include_summary=True,
+                    include_details=True,
+                    include_charts=True,
+                    include_recommendations=True
+                )
+                
+                report_path = reporter.generate_report(results, report_cfg)
                 time.sleep(1)
                 console.print(f"[bold green]✓[/] Report saved to: [cyan]{report_path}[/]")
             except Exception as e:
@@ -718,10 +732,8 @@ class VulnSleuthTUI:
         console.print(f"[yellow]Press Ctrl+C to stop the server[/]\n")
         
         try:
-            from webapp import app, init_dashboard
-            init_dashboard(self.config)
-            app.config.update(self.config)
-            app.run(host=host, port=port, debug=False)
+            from app import run_app
+            run_app(host=host, port=port, debug=False)
         except KeyboardInterrupt:
             console.print("\n[yellow]Dashboard stopped[/]")
         except Exception as e:
