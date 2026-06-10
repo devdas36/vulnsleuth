@@ -5,7 +5,7 @@
 
 A comprehensive vulnerability assessment platform with multiple interfaces (TUI, Web Dashboard, CLI), extensible plugin system, and automated security testing capabilities.
 
-**Author**: Devdas | **Email**: <d3vdas36@gmail.com> | **GitHub**: [@devdas36](https://github.com/devdas36)
+**Author**: Muhammad Bilal Badar | **Email**: <d3vdas36@gmail.com> | **GitHub**: [@bali-36](https://github.com/bali-36)
 
 ---
 
@@ -56,7 +56,7 @@ VulnSleuth is a professional security scanning framework for ethical hackers, se
 
 ```bash
 # Clone repository
-git clone https://github.com/devdas36/vulnsleuth.git
+git clone https://github.com/bali-36/vulnsleuth.git
 cd vulnsleuth
 
 # Install dependencies
@@ -345,9 +345,9 @@ See [LICENSE](LICENSE) file for details.
 
 ## Contact
 
-**Devdas** | <d3vdas36@gmail.com> | [@devdas36](https://github.com/devdas36)
+**Devdas** | <d3vdas36@gmail.com> | [@bali-36](https://github.com/bali-36)
 
-- **Bugs/Features**: [GitHub Issues](https://github.com/devdas36/vulnsleuth/issues)
+- **Bugs/Features**: [GitHub Issues](https://github.com/bali-36/vulnsleuth/issues)
 - **Security**: <d3vdas36@gmail.com> (responsible disclosure)
 
 ---
